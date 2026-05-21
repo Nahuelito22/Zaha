@@ -253,7 +253,8 @@ ml_engine/.venv/
 
 # DATOS SENSIBLES Y MODELOS
 # Ignorar todos los datos crudos y procesados
-ml_engine/data/
+ml_engine/data/*
+!ml_engine/data/**/.gitkeep
 ml_engine/data/**/*.csv
 ml_engine/data/**/*.parquet
 ml_engine/data/**/*.json

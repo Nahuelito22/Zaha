@@ -21,6 +21,7 @@ Este repositorio contiene tanto la aplicación cliente como el motor predictivo 
 | `/app` | Frontend y PWA construida con Astro. Lógica UI/UX "One-Click". |
 | `/ml_engine` | Motor predictivo. Pipelines de datos, experimentación (Notebooks), y API de inferencia. |
 | `/supabase` | Migraciones SQL, políticas de seguridad (RLS) y seeds de la base de datos. |
+| `/ayudas_y_recursos` | Carpeta para ayudas personales, guías, recursos y archivos de soporte local. |
 
 ## Roadmap de Desarrollo
 
