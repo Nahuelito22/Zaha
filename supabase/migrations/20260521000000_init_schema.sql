@@ -1,0 +1,1 @@
+-- TODO: Insertar esquema de profiles, patients y vital_records (Iteración 1).
