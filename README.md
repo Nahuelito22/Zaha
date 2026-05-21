@@ -1,4 +1,4 @@
-# Zaha CDSS 🫀
+# Zaha CDSS 
 **Sistema de Soporte a la Decisión Clínica (CDSS) para la Detección Temprana de Deterioro.**
 
 Zaha es una plataforma Mobile-First diseñada para reemplazar el registro en papel de signos vitales en entornos clínicos. Utiliza un motor determinístico basado en la escala matemática **NEWS2** y un motor predictivo de Inteligencia Artificial (**LSTM**) para analizar series temporales y alertar sobre el deterioro del paciente antes de que ocurra.
