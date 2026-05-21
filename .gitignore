@@ -275,3 +275,6 @@ ml_engine/models/*.keras
 # OS
 .DS_Store
 Thumbs.db
+
+# Carpeta_de_Archivos_Personales
+ayudas_y_recursos/
