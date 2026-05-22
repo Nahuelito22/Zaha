@@ -279,3 +279,7 @@ Thumbs.db
 
 # Carpeta_de_Archivos_Personales
 ayudas_y_recursos/
+
+# Agent Skills
+.agents/
+skills-lock.json
