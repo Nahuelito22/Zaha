@@ -283,3 +283,12 @@ ayudas_y_recursos/
 # Agent Skills
 .agents/
 skills-lock.json
+
+# Supabase CLI
+.supabase/
+
+# OpenCode local config / cache
+.opencode/
+
+# Supabase MCP tokens / auth cache
+.mcp-auth/
