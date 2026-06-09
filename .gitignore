@@ -292,3 +292,6 @@ skills-lock.json
 
 # Supabase MCP tokens / auth cache
 .mcp-auth/
+
+# Guia de desarrollo y Backlog
+/Plan
