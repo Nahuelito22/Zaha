@@ -16,7 +16,7 @@ El sistema está construido bajo una arquitectura de microservicios y despliegue
 
 Este repositorio contiene tanto la aplicación cliente como el motor predictivo de IA:
 
-| Directorio | Descripción |
+| Directorio | Descripción | :)
 | :--- | :--- |
 | `/app` | Frontend y PWA construida con Astro. Lógica UI/UX "One-Click". |
 | `/ml_engine` | Motor predictivo. Pipelines de datos, experimentación (Notebooks), y API de inferencia. |
