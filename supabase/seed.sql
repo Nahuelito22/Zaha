@@ -34,22 +34,32 @@ BEGIN
   --    El trigger handle_new_user() crea el profile automáticamente con rol
   --    'enfermero'; después se eleva el de los otros dos.
   -- ---------------------------------------------------------------------------
+  -- OJO con las cuatro columnas de token que van en cadena vacía y no en NULL.
+  -- No tienen DEFAULT en el esquema de auth, pero GoTrue las lee como texto no
+  -- nulo: si quedan en NULL, el login falla con "Database error querying
+  -- schema", que no dice nada sobre la causa real. Es el precio de crear
+  -- usuarios por SQL en vez de por la API de administración.
   INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password,
                           email_confirmed_at, created_at, updated_at,
-                          raw_app_meta_data, raw_user_meta_data)
+                          raw_app_meta_data, raw_user_meta_data,
+                          confirmation_token, recovery_token,
+                          email_change, email_change_token_new)
   VALUES
     (v_enf,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'vanina.aguero@zaha.dev', extensions.crypt('zaha1234', extensions.gen_salt('bf')), NOW(), NOW(), NOW(),
      '{"provider":"email","providers":["email"]}'::jsonb,
-     '{"full_name":"Lic. Vanina Soledad Agüero"}'::jsonb),
+     '{"full_name":"Lic. Vanina Soledad Agüero"}'::jsonb,
+     '', '', '', ''),
     (v_med,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'ricardo.olguin@zaha.dev', extensions.crypt('zaha1234', extensions.gen_salt('bf')), NOW(), NOW(), NOW(),
      '{"provider":"email","providers":["email"]}'::jsonb,
-     '{"full_name":"Dr. Ricardo Olguín"}'::jsonb),
+     '{"full_name":"Dr. Ricardo Olguín"}'::jsonb,
+     '', '', '', ''),
     (v_jefe, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'silvia.paredes@zaha.dev', extensions.crypt('zaha1234', extensions.gen_salt('bf')), NOW(), NOW(), NOW(),
      '{"provider":"email","providers":["email"]}'::jsonb,
-     '{"full_name":"Lic. Silvia Paredes"}'::jsonb);
+     '{"full_name":"Lic. Silvia Paredes"}'::jsonb,
+     '', '', '', '');
 
   UPDATE public.profiles SET role = 'medico', license_id = 'MP 14582' WHERE id = v_med;
   UPDATE public.profiles SET role = 'jefe',   license_id = 'MP 09317' WHERE id = v_jefe;
