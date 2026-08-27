@@ -1,0 +1,343 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ZAHA — CAPA CLÍNICA
+   Alcance: /app (dashboard, carga de vitales, detalle de paciente, alertas).
+
+   Regla que origina esta capa: la paleta tierra de la marca ("Organic",
+   ver brand.css) es terracota. Ese rango cromático es el mismo del rojo y el
+   ámbar de alerta NEWS2. Si tiñe la interfaz clínica pasan dos cosas malas a
+   la vez: elementos neutros PARECEN alerta (fatiga de alarma — justo lo que
+   el proyecto dice querer reducir) y la alerta real NO destaca porque todo
+   alrededor ya es de ese color.
+
+   Por eso esta capa es cromáticamente neutra y reserva EN EXCLUSIVA
+   verde / ámbar / naranja / rojo para los 4 niveles de riesgo NEWS2.
+   Ningún otro elemento de /app puede usar esos hues.
+
+   Codificación redundante obligatoria: cada nivel se comunica siempre con
+   color + texto + forma (nunca solo color). ~8% de los varones tienen
+   déficit de visión al color; en una guardia con luz mala y una tablet
+   barata, el color solo no es una señal confiable.
+   ═══════════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
+
+.zaha-clinical {
+  /* — Superficie: neutros fríos de alto contraste, sin calidez de marca — */
+  --c-bg:            #ffffff;
+  --c-surface:       #f6f7f9;
+  --c-surface-alt:   #eceef2;
+  --c-border:        #d6dae1;
+  --c-border-strong: #a8b0bb;
+  --c-text:          #14171c;
+  --c-text-muted:    #5a636f;
+  --c-text-faint:    #8b95a1;
+
+  /* Único acento de interacción: azul. No compite con rojo/ámbar/verde. */
+  --c-action:        #1f5fb8;
+  --c-action-hover:  #184c95;
+  --c-action-active: #133a73;
+  --c-action-tint:   #e8f0fb;
+
+  /* — NIVELES DE RIESGO NEWS2 — reservados, no reutilizar — */
+  /* Bajo (NEWS2 0-4, sin parámetro individual en 3) */
+  --c-risk-low:        #1f7a44;
+  --c-risk-low-bg:     #e6f4ec;
+  --c-risk-low-border: #1f7a44;
+  /* Medio Bajo (NEWS2 0-4 con un parámetro individual en 3) */
+  --c-risk-lowmed:        #8a6d00;
+  --c-risk-lowmed-bg:     #fdf5d9;
+  --c-risk-lowmed-border: #b08c00;
+  /* Medio (NEWS2 5-6) */
+  --c-risk-med:        #a4480a;
+  --c-risk-med-bg:     #fdeee0;
+  --c-risk-med-border: #d1600f;
+  /* Alto (NEWS2 >= 7) */
+  --c-risk-high:        #a71322;
+  --c-risk-high-bg:     #fdeaec;
+  --c-risk-high-border: #c8182a;
+
+  /* Predicción de IA — deliberadamente fuera de la escala NEWS2.
+     Violeta: nunca se confunde con un nivel determinístico. */
+  --c-predict:      #5b3d9e;
+  --c-predict-bg:   #f0ebfa;
+
+  --font-clinical: "Figtree", system-ui, -apple-system, sans-serif;
+  /* Tabular para que las columnas de vitales alineen dígito a dígito. */
+  --font-numeric: "Figtree", ui-monospace, system-ui, sans-serif;
+
+  /* Escala de espaciado propia: más apretada que la de marca (más pacientes
+     por pantalla) pero con blancos de toque de 44px. */
+  --cs-1: 4px;  --cs-2: 8px;  --cs-3: 12px;
+  --cs-4: 16px; --cs-6: 24px; --cs-8: 32px;
+
+  /* Radios sobrios. La marca sobre-redondea; acá no: la forma es señal. */
+  --cr-sm: 4px; --cr-md: 8px; --cr-lg: 12px;
+
+  /* Altura mínima de cualquier target táctil. Se carga con guantes. */
+  --touch: 44px;
+
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-clinical);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.zaha-clinical h1, .zaha-clinical h2, .zaha-clinical h3,
+.zaha-clinical h4, .zaha-clinical h5, .zaha-clinical h6 {
+  font-family: var(--font-clinical);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--cs-2);
+}
+.zaha-clinical h1 { font-size: 26px; }
+.zaha-clinical h2 { font-size: 21px; }
+.zaha-clinical h3 { font-size: 18px; }
+.zaha-clinical h4 { font-size: 16px; }
+
+.zaha-clinical :focus { outline: none; }
+.zaha-clinical :focus-visible {
+  outline: 3px solid var(--c-action);
+  outline-offset: 2px;
+  border-radius: var(--cr-sm);
+}
+
+/* ── Nivel de riesgo ─────────────────────────────────────────────────────
+   Uso: <span class="risk risk-high"><span class="risk-glyph"></span>Alto</span>
+   El glifo cambia de FORMA por nivel, así que el nivel se lee aunque el
+   color no llegue: círculo · rombo · triángulo · triángulo relleno.
+   El texto del nivel es obligatorio: nunca un punto de color solo.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .risk {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cs-2);
+  padding: 3px 10px 3px 8px;
+  border-radius: var(--cr-sm);
+  border: 1px solid;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.zaha-clinical .risk-glyph {
+  width: 12px; height: 12px; flex: none;
+  background: currentColor;
+}
+.zaha-clinical .risk-low {
+  color: var(--c-risk-low);
+  background: var(--c-risk-low-bg);
+  border-color: var(--c-risk-low-border);
+}
+.zaha-clinical .risk-low .risk-glyph {
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+.zaha-clinical .risk-lowmed {
+  color: var(--c-risk-lowmed);
+  background: var(--c-risk-lowmed-bg);
+  border-color: var(--c-risk-lowmed-border);
+}
+.zaha-clinical .risk-lowmed .risk-glyph {
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.zaha-clinical .risk-med {
+  color: var(--c-risk-med);
+  background: var(--c-risk-med-bg);
+  border-color: var(--c-risk-med-border);
+}
+.zaha-clinical .risk-med .risk-glyph {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  background: transparent;
+  border-bottom: 12px solid currentColor;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  height: 0;
+}
+.zaha-clinical .risk-high {
+  color: var(--c-risk-high);
+  background: var(--c-risk-high-bg);
+  border-color: var(--c-risk-high-border);
+  border-width: 2px;
+}
+.zaha-clinical .risk-high .risk-glyph {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
+/* Barra lateral de la fila/tarjeta del paciente: refuerza el nivel a lo
+   largo de todo el elemento, no solo en el chip. Grosor creciente = otra
+   señal no cromática. */
+.zaha-clinical .risk-edge-low    { box-shadow: inset 3px 0 0 var(--c-risk-low-border); }
+.zaha-clinical .risk-edge-lowmed { box-shadow: inset 4px 0 0 var(--c-risk-lowmed-border); }
+.zaha-clinical .risk-edge-med    { box-shadow: inset 6px 0 0 var(--c-risk-med-border); }
+.zaha-clinical .risk-edge-high   { box-shadow: inset 8px 0 0 var(--c-risk-high-border); }
+
+/* ── Predicción del motor de IA ──────────────────────────────────────────
+   Separada visualmente del score determinístico a propósito: el usuario
+   tiene que poder distinguir "esto lo calculó la escala" de "esto lo
+   estimó un modelo". Si el Space duerme, este bloque desaparece y NEWS2
+   sigue mostrándose igual (ADR-004).
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .predict {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cs-2);
+  padding: 3px 10px;
+  border-radius: var(--cr-sm);
+  border: 1px dashed var(--c-predict);
+  background: var(--c-predict-bg);
+  color: var(--c-predict);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Valores de vitales ──────────────────────────────────────────────── */
+.zaha-clinical .vital-value {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+}
+.zaha-clinical .vital-unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  margin-left: 2px;
+}
+.zaha-clinical .vital-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+}
+/* Puntaje parcial del parámetro (0-3) según la escala. */
+.zaha-clinical .vital-subscore {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: var(--cr-sm);
+  background: var(--c-surface-alt);
+  color: var(--c-text-muted);
+}
+
+/* ── Superficies y acciones ──────────────────────────────────────────── */
+.zaha-clinical .panel {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--cr-lg);
+  padding: var(--cs-4);
+}
+.zaha-clinical .cbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--cs-2);
+  min-height: var(--touch);
+  padding: 0 var(--cs-4);
+  border: 1px solid transparent;
+  border-radius: var(--cr-md);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.zaha-clinical .cbtn-primary {
+  background: var(--c-action);
+  color: #fff;
+}
+.zaha-clinical .cbtn-primary:hover  { background: var(--c-action-hover); }
+.zaha-clinical .cbtn-primary:active { background: var(--c-action-active); }
+.zaha-clinical .cbtn-secondary {
+  background: var(--c-bg);
+  border-color: var(--c-border-strong);
+  color: var(--c-text);
+}
+.zaha-clinical .cbtn-secondary:hover { background: var(--c-surface-alt); }
+.zaha-clinical .cbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.zaha-clinical .cinput {
+  width: 100%;
+  min-height: var(--touch);
+  padding: 0 var(--cs-3);
+  font: inherit;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--c-text);
+  background: var(--c-bg);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--cr-md);
+}
+.zaha-clinical .cinput:focus-visible { border-color: var(--c-action); }
+/* Valor fuera del rango fisiológico plausible: NO usa rojo de riesgo — es
+   un error de carga, no un nivel clínico. Se marca con forma y texto. */
+.zaha-clinical .cinput[aria-invalid="true"] {
+  border-width: 2px;
+  border-style: dashed;
+  border-color: var(--c-text);
+}
+
+/* ── Tabla de pacientes ──────────────────────────────────────────────── */
+.zaha-clinical .ctable { width: 100%; border-collapse: collapse; font-size: 15px; }
+.zaha-clinical .ctable th {
+  text-align: left;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-muted);
+  padding: var(--cs-2) var(--cs-3);
+  border-bottom: 2px solid var(--c-border-strong);
+}
+.zaha-clinical .ctable td {
+  padding: var(--cs-3);
+  border-bottom: 1px solid var(--c-border);
+  vertical-align: middle;
+}
+.zaha-clinical .ctable tbody tr:hover { background: var(--c-surface); }
+.zaha-clinical .ctable .col-num {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Dato faltante ───────────────────────────────────────────────────────
+   Un vital sin cargar NO es un vital normal. NEWS2 sobre datos incompletos
+   no es un NEWS2 válido, y la interfaz tiene que decirlo explícitamente.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .missing {
+  color: var(--c-text-faint);
+  font-style: italic;
+}
+.zaha-clinical .score-incomplete {
+  border: 1px dashed var(--c-border-strong);
+  background: repeating-linear-gradient(
+    45deg, transparent, transparent 5px,
+    var(--c-surface-alt) 5px, var(--c-surface-alt) 10px
+  );
+}
+
+/* ── Antigüedad de la medición ───────────────────────────────────────────
+   Un NEWS2 de hace 6 h no vale lo mismo que uno de hace 10 min.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .staleness {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted);
+}
+.zaha-clinical .staleness-overdue {
+  color: var(--c-text);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-style: wavy;
+  text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zaha-clinical *, .zaha-clinical *::before, .zaha-clinical *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
