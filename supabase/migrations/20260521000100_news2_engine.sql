@@ -148,6 +148,7 @@ DECLARE
   v_scale      SMALLINT;
   v_scores     INT[];
   v_encounter  RECORD;
+  v_amended    RECORD;
 BEGIN
   SELECT e.patient_id, e.spo2_scale, e.status
     INTO v_encounter
@@ -165,11 +166,52 @@ BEGIN
       NEW.patient_id, NEW.encounter_id;
   END IF;
 
-  IF v_encounter.status <> 'activo' THEN
+  -- Una observación NUEVA exige episodio abierto. Una ENMIENDA no: corregir un
+  -- error de carga descubierto después del alta es justamente el caso que
+  -- justifica que esta tabla sea append-only.
+  IF v_encounter.status <> 'activo' AND NEW.amends_id IS NULL THEN
     RAISE EXCEPTION 'No se pueden cargar signos vitales en un episodio finalizado';
   END IF;
 
-  v_scale := v_encounter.spo2_scale;
+  -- --- Cadena de enmiendas ---------------------------------------------------
+  -- El sellado lo pone el sistema (trigger AFTER), nunca el cliente.
+  NEW.superseded_by := NULL;
+  NEW.superseded_at := NULL;
+
+  IF NEW.amends_id IS NULL THEN
+    NEW.original_id := NEW.id;          -- esta fila es la raíz de su cadena
+    v_scale         := v_encounter.spo2_scale;
+  ELSE
+    SELECT v.encounter_id, v.patient_id, v.original_id, v.superseded_by,
+           v.spo2_scale_used
+      INTO v_amended
+      FROM public.vital_records v
+     WHERE v.id = NEW.amends_id
+     FOR UPDATE;                        -- serializa dos enmiendas simultáneas
+
+    IF NOT FOUND THEN
+      RAISE EXCEPTION 'El registro a enmendar % no existe', NEW.amends_id;
+    END IF;
+
+    IF v_amended.superseded_by IS NOT NULL THEN
+      RAISE EXCEPTION 'El registro % ya fue enmendado por %: corregí la versión vigente',
+        NEW.amends_id, v_amended.superseded_by;
+    END IF;
+
+    -- Una enmienda corrige valores, no reasigna el registro a otra persona.
+    IF NEW.encounter_id IS DISTINCT FROM v_amended.encounter_id
+    OR NEW.patient_id   IS DISTINCT FROM v_amended.patient_id THEN
+      RAISE EXCEPTION 'Una enmienda no puede mover el registro a otro paciente o episodio';
+    END IF;
+
+    NEW.original_id := v_amended.original_id;
+
+    -- Una enmienda se puntúa con la escala que regía cuando se tomó el signo,
+    -- no con la prescripción de hoy: corregir un valor mal tipeado no debe
+    -- cambiar de paso la regla clínica que se le aplicó. Para eso existe
+    -- spo2_scale_used.
+    v_scale := COALESCE(v_amended.spo2_scale_used, v_encounter.spo2_scale);
+  END IF;
 
   v_scores := ARRAY[
     public.news2_score_respiratory_rate(NEW.respiratory_rate),
@@ -190,8 +232,10 @@ BEGIN
 END;
 $fn$;
 
+-- Solo BEFORE INSERT. La tabla es append-only: el único UPDATE que existe es el
+-- sellado de superseded_by, que no debe recalcular nada.
 CREATE TRIGGER trigger_calculate_news2
-  BEFORE INSERT OR UPDATE ON public.vital_records
+  BEFORE INSERT ON public.vital_records
   FOR EACH ROW EXECUTE FUNCTION public.calculate_news2_score();
 
 -- -----------------------------------------------------------------------------
@@ -214,7 +258,10 @@ BEGIN
     ) VALUES (
       NEW.patient_id, NEW.encounter_id, NEW.id,
       'news2', NEW.risk_level, NEW.news2_score,
-      format('NEWS2 %s - riesgo %s', NEW.news2_score, NEW.risk_level),
+      format('NEWS2 %s - riesgo %s%s', NEW.news2_score, NEW.risk_level,
+             CASE WHEN NEW.amends_id IS NOT NULL
+                  THEN ' (recalculado sobre un registro enmendado)'
+                  ELSE '' END),
       NEW.recorded_at
     );
   END IF;
@@ -226,3 +273,54 @@ $fn$;
 CREATE TRIGGER trigger_emit_news2_alert
   AFTER INSERT ON public.vital_records
   FOR EACH ROW EXECUTE FUNCTION public.emit_news2_alert();
+
+-- -----------------------------------------------------------------------------
+-- Aplicación de una enmienda.
+--
+-- Corre DESPUÉS del insert de la enmienda y hace las dos cosas que la enmienda
+-- provoca del lado del registro viejo. Ninguna toca un valor clínico.
+--
+-- SECURITY DEFINER: sella filas y cierra alertas, dos cosas que el usuario
+-- autenticado no puede hacer por su cuenta (y no debe poder).
+--
+-- Se llama trigger_apply_amendment y no trigger_emit_*: los AFTER triggers de
+-- una misma tabla corren en orden alfabético, así que 'apply' cierra la alerta
+-- vieja antes de que 'emit' abra la nueva.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.apply_amendment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $fn$
+BEGIN
+  IF NEW.amends_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Único UPDATE que existe sobre vital_records en todo el sistema.
+  UPDATE public.vital_records
+     SET superseded_by = NEW.id,
+         superseded_at = NOW()
+   WHERE id = NEW.amends_id;
+
+  -- La alerta que disparó el dato erróneo NO se borra: pasó, y la traza legal
+  -- tiene que mostrar que pasó. Pero deja de estar pendiente, porque la versión
+  -- vigente ya emitió la suya. Queda firmada por quien enmendó y con el motivo.
+  UPDATE public.alerts
+     SET status               = 'descartada',
+         acknowledged_by      = NEW.recorded_by,
+         acknowledged_at      = NOW(),
+         acknowledgement_note = format(
+           'Cerrada al enmendarse el registro de origen (enmienda %s). Motivo: %s',
+           NEW.id, NEW.amendment_reason)
+   WHERE vital_record_id = NEW.amends_id
+     AND status = 'pendiente';
+
+  RETURN NULL;
+END;
+$fn$;
+
+CREATE TRIGGER trigger_apply_amendment
+  AFTER INSERT ON public.vital_records
+  FOR EACH ROW EXECUTE FUNCTION public.apply_amendment();

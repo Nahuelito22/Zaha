@@ -196,14 +196,66 @@ CREATE POLICY vital_records_insert ON public.vital_records
     AND recorded_by = (SELECT auth.uid())
   );
 
--- Corrección solo de los registros propios.
--- NOTA: esto sobrescribe el valor anterior. Ver la nota de inmutabilidad al pie.
-CREATE POLICY vital_records_update_own ON public.vital_records
-  FOR UPDATE TO authenticated
-  USING (recorded_by = (SELECT auth.uid()))
-  WITH CHECK (recorded_by = (SELECT auth.uid()));
+-- Sin política de UPDATE ni de DELETE: la tabla es append-only.
+--
+-- Corregir una toma es INSERTAR una enmienda (amends_id + amendment_reason),
+-- que pasa por la política de INSERT de arriba y por lo tanto queda firmada por
+-- quien la hace. El sellado de la fila vieja lo hace el trigger
+-- apply_amendment(), que es SECURITY DEFINER y no pasa por RLS.
+--
+-- Ojo: RLS por sí solo no alcanzaría acá. service_role lo saltea entero, y las
+-- migraciones futuras también. Por eso la inmutabilidad se garantiza además con
+-- un trigger, que corre pase lo que pase.
+CREATE OR REPLACE FUNCTION public.guard_vital_record_immutable()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $fn$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'vital_records es append-only: un registro clínico no se borra';
+  END IF;
 
--- Sin política de DELETE: un registro clínico no se borra.
+  IF OLD.superseded_by IS NOT NULL THEN
+    RAISE EXCEPTION 'El registro % ya fue enmendado y está sellado', OLD.id;
+  END IF;
+
+  IF NEW.encounter_id        IS DISTINCT FROM OLD.encounter_id
+  OR NEW.patient_id          IS DISTINCT FROM OLD.patient_id
+  OR NEW.recorded_by         IS DISTINCT FROM OLD.recorded_by
+  OR NEW.recorded_at         IS DISTINCT FROM OLD.recorded_at
+  OR NEW.respiratory_rate    IS DISTINCT FROM OLD.respiratory_rate
+  OR NEW.oxygen_saturation   IS DISTINCT FROM OLD.oxygen_saturation
+  OR NEW.supplemental_oxygen IS DISTINCT FROM OLD.supplemental_oxygen
+  OR NEW.temperature         IS DISTINCT FROM OLD.temperature
+  OR NEW.systolic_bp         IS DISTINCT FROM OLD.systolic_bp
+  OR NEW.heart_rate          IS DISTINCT FROM OLD.heart_rate
+  OR NEW.consciousness_level IS DISTINCT FROM OLD.consciousness_level
+  OR NEW.news2_score         IS DISTINCT FROM OLD.news2_score
+  OR NEW.risk_level          IS DISTINCT FROM OLD.risk_level
+  OR NEW.single_red_flag     IS DISTINCT FROM OLD.single_red_flag
+  OR NEW.spo2_scale_used     IS DISTINCT FROM OLD.spo2_scale_used
+  OR NEW.amends_id           IS DISTINCT FROM OLD.amends_id
+  OR NEW.amendment_reason    IS DISTINCT FROM OLD.amendment_reason
+  OR NEW.original_id         IS DISTINCT FROM OLD.original_id
+  OR NEW.created_at          IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION
+      'vital_records es append-only: para corregir una toma insertá una enmienda (amends_id + amendment_reason)';
+  END IF;
+
+  -- Llegado acá lo único que cambió es el sellado. Exigimos que efectivamente
+  -- haya sellado algo: un UPDATE que no hace nada no debería pasar en silencio.
+  IF NEW.superseded_by IS NULL THEN
+    RAISE EXCEPTION 'UPDATE sin efecto sobre vital_records';
+  END IF;
+
+  RETURN NEW;
+END;
+$fn$;
+
+CREATE TRIGGER vital_records_guard_immutable
+  BEFORE UPDATE OR DELETE ON public.vital_records
+  FOR EACH ROW EXECUTE FUNCTION public.guard_vital_record_immutable();
 
 -- -----------------------------------------------------------------------------
 -- alerts
@@ -271,23 +323,67 @@ CREATE TRIGGER alerts_guard_acknowledgement
 GRANT SELECT, UPDATE                 ON public.profiles      TO authenticated;
 GRANT SELECT, INSERT, UPDATE         ON public.patients      TO authenticated;
 GRANT SELECT, INSERT, UPDATE         ON public.encounters    TO authenticated;
-GRANT SELECT, INSERT, UPDATE         ON public.vital_records TO authenticated;
+-- vital_records: sin UPDATE ni DELETE. Append-only también a nivel privilegio.
+GRANT SELECT, INSERT                 ON public.vital_records TO authenticated;
+GRANT SELECT                         ON public.vital_records_vigentes TO authenticated;
 GRANT SELECT, UPDATE                 ON public.alerts        TO authenticated;
 
 REVOKE ALL ON public.profiles      FROM anon;
 REVOKE ALL ON public.patients      FROM anon;
 REVOKE ALL ON public.encounters    FROM anon;
 REVOKE ALL ON public.vital_records FROM anon;
+REVOKE ALL ON public.vital_records_vigentes FROM anon;
 REVOKE ALL ON public.alerts        FROM anon;
 
 -- -----------------------------------------------------------------------------
--- NOTA PENDIENTE — inmutabilidad de vital_records
+-- EXECUTE sobre las funciones.
 --
--- Hoy una toma propia se puede editar y el valor anterior se pierde. Para un
--- registro clínico con valor legal lo correcto es append-only: la corrección
--- se guarda como un registro nuevo que apunta al que enmienda, y el original
--- queda marcado como enmendado pero visible.
---
--- No se implementa acá porque cambia el modelo de datos que consume el
--- frontend. Queda como decisión a tomar antes de cualquier uso real.
+-- Postgres otorga EXECUTE a PUBLIC por defecto, y PostgREST publica todo lo que
+-- viva en el schema public como endpoint /rest/v1/rpc/<funcion>. Sin esto, las
+-- funciones de trigger —varias SECURITY DEFINER— quedan invocables a mano desde
+-- internet. Un trigger no necesita EXECUTE: lo invoca el motor, no el usuario.
 -- -----------------------------------------------------------------------------
+REVOKE EXECUTE ON FUNCTION
+  public.set_updated_at(),
+  public.calculate_news2_score(),
+  public.emit_news2_alert(),
+  public.apply_amendment(),
+  public.handle_new_user(),
+  public.guard_profile_privileges(),
+  public.guard_encounter_medical_fields(),
+  public.guard_vital_record_immutable(),
+  public.guard_alert_acknowledgement()
+FROM PUBLIC, anon, authenticated;
+
+-- Estas dos sí se ejecutan en nombre del usuario: son el cuerpo de las
+-- políticas RLS. Sin EXECUTE para authenticated, no habría acceso a nada.
+REVOKE EXECUTE ON FUNCTION
+  public.current_profile_role(), public.is_active_staff()
+FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION
+  public.current_profile_role(), public.is_active_staff()
+TO authenticated;
+
+-- El motor NEWS2 son funciones puras, sin acceso a datos. Se dejan disponibles
+-- para el personal (permiten previsualizar un score antes de guardar la toma),
+-- pero no para anónimos.
+REVOKE EXECUTE ON FUNCTION
+  public.news2_score_respiratory_rate(INT),
+  public.news2_score_spo2(INT, SMALLINT, BOOLEAN),
+  public.news2_score_supplemental_oxygen(BOOLEAN),
+  public.news2_score_temperature(NUMERIC),
+  public.news2_score_systolic_bp(INT),
+  public.news2_score_heart_rate(INT),
+  public.news2_score_consciousness(TEXT),
+  public.news2_risk_level(INT, BOOLEAN)
+FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION
+  public.news2_score_respiratory_rate(INT),
+  public.news2_score_spo2(INT, SMALLINT, BOOLEAN),
+  public.news2_score_supplemental_oxygen(BOOLEAN),
+  public.news2_score_temperature(NUMERIC),
+  public.news2_score_systolic_bp(INT),
+  public.news2_score_heart_rate(INT),
+  public.news2_score_consciousness(TEXT),
+  public.news2_risk_level(INT, BOOLEAN)
+TO authenticated;
