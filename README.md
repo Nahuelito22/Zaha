@@ -7,10 +7,11 @@ Zaha es una plataforma Mobile-First diseñada para reemplazar el registro en pap
 
 El sistema está construido bajo una arquitectura de microservicios y despliegue Serverless, preparado para interoperabilidad futura con estándares HL7 FHIR.
 
-- **Frontend / PWA:** Astro + Tailwind CSS (Optimizado para tablets/móviles offline).
+- **Landing:** Astro + Tailwind CSS.
+- **App clínica / PWA:** React + Vite + TypeScript, instalable y con soporte offline (optimizada para tablets/móviles).
 - **Base de Datos & Auth:** Supabase (PostgreSQL) con Row Level Security (RLS).
-- **Motor de Inteligencia Artificial:** Python (TensorFlow/Keras, Scikit-learn).
-- **Inferencia:** API RESTful (FastAPI) desplegada en Hugging Face / Render.
+- **Motor de Inteligencia Artificial:** Python (PyTorch, XGBoost/LightGBM, Scikit-learn).
+- **Inferencia:** modelo exportado a ONNX y servido con onnxruntime vía API RESTful (FastAPI) en Hugging Face Spaces.
 
 ## Estructura del Monorepo
 
