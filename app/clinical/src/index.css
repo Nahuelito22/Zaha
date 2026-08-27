@@ -1,11 +1,14 @@
-@import 'tailwindcss';
+/* El sistema de diseño va PRIMERO: clinical.css trae su propio @import de la
+   tipografía, y un @import solo es válido si precede a toda otra regla. Si
+   Tailwind va antes, la fuente queda mal ubicada y el bundler avisa.
 
-/* Capa clínica del sistema de diseño. Se activa con class="zaha-clinical".
+   Capa clínica del sistema de diseño. Se activa con class="zaha-clinical".
    La capa de MARCA (crema, terracota, Caprasimo) queda deliberadamente fuera
    de la app: la terracota ocupa el mismo rango cromático que el ámbar de
    alerta, y si tiñe la interfaz, los elementos neutros parecen alerta y la
    alerta real deja de destacar. La marca vive en la landing y en el login. */
 @import '../../../design_system/clinical.css';
+@import 'tailwindcss';
 
 html,
 body,
