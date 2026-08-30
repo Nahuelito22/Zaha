@@ -1,0 +1,44 @@
+# =============================================================================
+# Zaha — Notebooks, análisis y entrenamiento (DESARROLLO)
+#
+# Incluye todo lo de producción más el instrumental de investigación.
+#     pip install -r requirements-dev.txt
+#
+# REPRODUCIBILIDAD: estos son rangos compatibles (~=), no versiones exactas.
+# Después de la primera instalación limpia hay que congelar el entorno real:
+#     pip freeze > requirements.lock.txt
+# y versionar ese lock. Una tesis que no se puede reinstalar igual no se puede
+# reproducir, y un resultado que no se reproduce no se puede defender.
+#
+# GPU: el equipo local es AMD, así que torch se instala en su variante CPU.
+# El único entrenamiento que necesita GPU es la LSTM (SCRUM-57) y va a Colab.
+# =============================================================================
+
+-r requirements.txt
+
+# --- Datos ---
+pandas~=3.0.5
+pyarrow~=25.0.1          # parquet: formato de trabajo para los intermedios
+polars~=1.44.1           # para los pasos donde pandas se queda corto en memoria
+
+# --- Validación de esquemas (SCRUM-52) ---
+pandera~=0.32.1
+
+# --- Modelado ---
+scikit-learn~=1.9.0
+xgboost~=3.4.1           # baseline y modelo principal segun ADR-005
+torch~=2.13.0            # solo para la LSTM, que es hipotesis bajo prueba
+
+# --- Exportación e inferencia (SCRUM-59) ---
+onnx~=1.22.0
+
+# --- Notebooks y figuras ---
+jupyterlab~=4.6.3
+matplotlib~=3.11.1
+seaborn~=0.13.2
+
+# --- Higiene del repositorio ---
+# Limpia las salidas de los notebooks al commitear. Instalación del filtro:
+#     nbstripout --install --attributes .gitattributes
+# Sin esto, un df.head() sobre MIMIC queda publicado en el historial de git.
+nbstripout~=0.9.1

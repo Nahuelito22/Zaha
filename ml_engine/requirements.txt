@@ -1,5 +1,18 @@
-fastapi
-uvicorn
-pydantic
-pandas
-scikit-learn
+# =============================================================================
+# Zaha — API de inferencia (PRODUCCIÓN)
+#
+# Esto es lo único que se instala en el contenedor de Hugging Face Spaces.
+# Deliberadamente NO incluye torch ni jupyter: el Space sirve un modelo ONNX
+# ya entrenado, no entrena nada. Meter torch acá agregaría ~2 GB al contenedor
+# y minutos de arranque en frío, que es justo lo que ADR-004 quiso evitar.
+#
+# Para trabajar en notebooks y entrenar, usar requirements-dev.txt.
+# =============================================================================
+
+fastapi~=0.141.1
+uvicorn~=0.52.4
+pydantic~=2.13.4
+
+# Runtime de inferencia. Sin torch: el modelo viaja en ONNX.
+onnxruntime~=1.29.0
+numpy~=2.5.2

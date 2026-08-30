@@ -131,10 +131,49 @@ CREATE TABLE public.vital_records (
   -- Si mañana cambia la prescripción, este score sigue siendo reproducible.
   spo2_scale_used      SMALLINT CHECK (spo2_scale_used IN (1, 2)),
 
+  -- --- Enmiendas (append-only) ----------------------------------------------
+  -- Esta tabla es INMUTABLE: no se hace UPDATE de valores clínicos ni DELETE.
+  -- Corregir una toma significa INSERTAR una fila nueva que apunta a la que
+  -- enmienda. El dato erróneo queda visible, con su score y su alerta: eso es
+  -- lo que hace que el log de auditoría (Épica 6) documente algo real.
+  --
+  -- Modelo FHIR equivalente: Observation.status = 'corrected' + Provenance.
+  amends_id            UUID REFERENCES public.vital_records(id) ON DELETE RESTRICT,
+  amendment_reason     TEXT,
+
+  -- Raíz de la cadena de versiones. Todas las versiones de una misma
+  -- observación comparten original_id, así que el historial completo es
+  -- UN solo índice, sin recursión. Lo completa el trigger.
+  original_id          UUID REFERENCES public.vital_records(id) ON DELETE RESTRICT,
+
+  -- Espejo de amends_id del lado enmendado. Es redundante a propósito: es lo
+  -- único que permite indexar "vigente" (superseded_by IS NULL), que es el
+  -- filtro de la consulta central del dashboard. Lo sella el sistema, una sola
+  -- vez, y es el ÚNICO campo que un UPDATE puede tocar.
+  superseded_by        UUID REFERENCES public.vital_records(id) ON DELETE RESTRICT,
+  superseded_at        TIMESTAMPTZ,
+
   created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT recorded_at_no_futuro
-    CHECK (recorded_at <= NOW() + INTERVAL '5 minutes')
+    CHECK (recorded_at <= NOW() + INTERVAL '5 minutes'),
+
+  -- Una enmienda sin motivo escrito no es una enmienda, es una sobreescritura
+  -- con pasos extra. El mínimo de longitud es deliberado.
+  --
+  -- El COALESCE no es decorativo: sin él, amendment_reason NULL hace que la
+  -- segunda rama evalúe a NULL, y un CHECK que da NULL NO se considera violado.
+  -- La restricción entera se volvía opcional justo en el caso que importa.
+  CONSTRAINT enmienda_requiere_motivo
+    CHECK (
+      (amends_id IS NULL     AND amendment_reason IS NULL)
+      OR
+      (amends_id IS NOT NULL AND COALESCE(length(trim(amendment_reason)), 0) >= 10)
+    ),
+  CONSTRAINT enmienda_no_se_apunta_a_si_misma
+    CHECK (amends_id IS NULL OR amends_id <> id),
+  CONSTRAINT sellado_de_enmienda_coherente
+    CHECK ((superseded_by IS NULL) = (superseded_at IS NULL))
 );
 
 COMMENT ON COLUMN public.vital_records.recorded_at IS
@@ -142,13 +181,63 @@ COMMENT ON COLUMN public.vital_records.recorded_at IS
 COMMENT ON COLUMN public.vital_records.spo2_scale_used IS
   'Escala aplicada al calcular este score. Denormalizada a propósito: garantiza reproducibilidad histórica.';
 
--- Query central del sistema: "últimas tomas de este paciente, más recientes primero".
+COMMENT ON TABLE public.vital_records IS
+  'Observaciones de signos vitales. APPEND-ONLY: se corrige insertando una enmienda, nunca con UPDATE.';
+COMMENT ON COLUMN public.vital_records.amends_id IS
+  'Registro que esta fila corrige. NULL = observación original.';
+COMMENT ON COLUMN public.vital_records.amendment_reason IS
+  'Por qué se corrigió. Obligatorio en toda enmienda: es la parte legible del rastro de auditoría.';
+COMMENT ON COLUMN public.vital_records.original_id IS
+  'Raíz de la cadena de versiones. Todas las versiones de una observación comparten este valor.';
+COMMENT ON COLUMN public.vital_records.superseded_by IS
+  'Enmienda que reemplazó a esta fila. NULL = versión vigente. Lo sella el sistema, una única vez.';
+
+-- Query central del sistema: "últimas tomas VIGENTES de este paciente, más
+-- recientes primero". El índice es parcial: las versiones enmendadas quedan
+-- fuera, así que la consulta del dashboard no paga el costo del historial.
 CREATE INDEX vital_records_paciente_tiempo
-  ON public.vital_records (patient_id, recorded_at DESC);
+  ON public.vital_records (patient_id, recorded_at DESC)
+  WHERE superseded_by IS NULL;
 
 -- Serie temporal por episodio (dashboard de detalle y armado del dataset).
+-- También sobre vigentes: entrenar el modelo con valores que ya se sabe que
+-- estaban mal sería aprender del error de tipeo.
 CREATE INDEX vital_records_episodio_tiempo
-  ON public.vital_records (encounter_id, recorded_at DESC);
+  ON public.vital_records (encounter_id, recorded_at DESC)
+  WHERE superseded_by IS NULL;
+
+-- Una toma puede ser enmendada UNA sola vez: el historial es una cadena, no un
+-- árbol. Si dos personas corrigen la misma fila a la vez, la segunda falla y
+-- tiene que releer — que es exactamente lo que queremos que pase.
+CREATE UNIQUE INDEX vital_records_una_enmienda_por_registro
+  ON public.vital_records (amends_id)
+  WHERE amends_id IS NOT NULL;
+
+-- Historial completo de una observación, en orden.
+CREATE INDEX vital_records_cadena_de_versiones
+  ON public.vital_records (original_id, recorded_at);
+
+-- -----------------------------------------------------------------------------
+-- vital_records_vigentes — lo que la app lee por defecto.
+--
+-- La app clínica casi siempre quiere "el valor que hoy vale". El historial de
+-- enmiendas se consulta explícitamente, filtrando vital_records por
+-- original_id. Separarlo en una vista evita que una pantalla se olvide del
+-- filtro y muestre un dato ya corregido.
+--
+-- security_invoker: la vista NO es una puerta trasera al RLS; se evalúa con los
+-- permisos de quien consulta, no de quien la creó.
+--
+-- OJO: usa SELECT *, así que si mañana se agrega una columna a vital_records
+-- hay que recrear la vista para que aparezca.
+-- -----------------------------------------------------------------------------
+CREATE VIEW public.vital_records_vigentes
+  WITH (security_invoker = on) AS
+  SELECT * FROM public.vital_records
+   WHERE superseded_by IS NULL;
+
+COMMENT ON VIEW public.vital_records_vigentes IS
+  'Versión vigente de cada observación. El historial completo vive en vital_records (filtrar por original_id).';
 
 -- -----------------------------------------------------------------------------
 -- alerts — traza de toda alerta emitida y de su reconocimiento

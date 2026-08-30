@@ -295,3 +295,53 @@ skills-lock.json
 
 # Guia de desarrollo y Backlog
 /Plan
+
+# =============================================================================
+# Datos clínicos restringidos (PhysioNet / MIMIC-IV-ED)
+#
+# El DUA de PhysioNet prohíbe redistribuir los datos. El historial de git es
+# append-only: un dato que entra en un commit no se saca con un rm después.
+# Por eso esto se deniega por defecto y se permite por excepción.
+#
+# Complemento obligatorio: nbstripout está instalado como filtro de git
+# (ver .gitattributes) y limpia las salidas de los notebooks al commitear.
+# Si clonás el repo en otra máquina, hay que reinstalarlo:
+#     pip install nbstripout && nbstripout --install --attributes .gitattributes
+# =============================================================================
+ml_engine/data/**
+!ml_engine/data/**/
+!ml_engine/data/**/.gitkeep
+
+# Formatos de datos, en cualquier lugar del repo
+*.csv
+*.parquet
+*.feather
+*.nc
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.dta
+*.sav
+
+# Excepciones: los CSV de planificación de Jira no son datos clínicos
+!Plan/*.csv
+
+# Modelos entrenados y artefactos pesados
+ml_engine/models/**
+*.onnx
+*.pt
+*.pth
+*.keras
+*.joblib
+
+# Credenciales de PhysioNet / Google Colab
+.physionet
+colab_secrets.json
+
+# El `lib/` genérico de más arriba (herencia de plantillas de Python) se come
+# app/*/src/lib, que es código fuente de la aplicación, no un directorio de
+# build. Se reincluye explícitamente: primero el directorio, después su
+# contenido — git no desciende a un directorio excluido.
+!app/**/src/lib/
+!app/**/src/lib/**
