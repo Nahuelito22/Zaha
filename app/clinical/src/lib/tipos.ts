@@ -28,6 +28,20 @@ export const PESO_RIESGO: Record<NivelRiesgo, number> = {
   Bajo: 3,
 }
 
+/**
+ * Peso de una cama SIN score vigente.
+ *
+ * Antes se la trataba como 'Bajo', lo cual afirma algo que no se sabe: una
+ * cama sin medición no es una cama de riesgo bajo, es una cama sin medir. Va
+ * al final de la lista igual que antes —no se inventa una urgencia que nadie
+ * validó clínicamente— pero como categoría propia y explícita, y en la sala se
+ * dibuja con `.score-incomplete`, no con el borde verde de riesgo bajo.
+ *
+ * Dónde ordenarla de verdad es una decisión clínica, no de código: queda para
+ * la validación con enfermería (SCRUM-46).
+ */
+export const PESO_SIN_SCORE = 4
+
 export const ROL_LEGIBLE: Record<Rol, string> = {
   enfermero: 'Enfermería',
   medico: 'Medicina',

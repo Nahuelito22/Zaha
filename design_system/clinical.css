@@ -199,6 +199,12 @@
   font-size: 20px;
   letter-spacing: -0.01em;
 }
+/* Score en primer plano: la confirmación de una toma y el encabezado del
+   detalle del paciente. Es el número que se lee desde el pie de la cama. */
+.zaha-clinical .vital-value-lg {
+  font-size: 34px;
+  line-height: 1.1;
+}
 .zaha-clinical .vital-unit {
   font-size: 12px;
   font-weight: 500;
@@ -222,6 +228,29 @@
   background: var(--c-surface-alt);
   color: var(--c-text-muted);
 }
+
+/* ── Texto de cuerpo ─────────────────────────────────────────────────────
+   La capa definía tamaños para los títulos y para las etiquetas de vitales,
+   pero no para el texto corriente, así que cada pantalla lo reinventaba con
+   valores sueltos. Cinco escalones alcanzan para /app y evitan que aparezca
+   un sexto tamaño improvisado.
+
+   `ctext` es el tamaño base y coincide con el del contenedor: existe para
+   poder volver al tamaño normal dentro de un bloque que lo cambió.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .ctext-lead { font-size: 16px; }
+.zaha-clinical .ctext      { font-size: 15px; }
+.zaha-clinical .ctext-sm   { font-size: 14px; }
+.zaha-clinical .ctext-xs   { font-size: 13px; }
+.zaha-clinical .ctext-2xs  { font-size: 12px; }
+
+/* Jerarquía por color, medida sobre --c-bg (#fff). `muted` es texto
+   secundario plenamente legible: 6.1:1, pasa AA y AAA para texto normal.
+   `faint` da 3.0:1 — NO alcanza AA. Sirve para lo que debe quedar en segundo
+   plano (un placeholder, un separador), y nunca para información clínica.
+   Un vital, un score o un motivo de enmienda jamás van en faint. */
+.zaha-clinical .ctext-muted { color: var(--c-text-muted); }
+.zaha-clinical .ctext-faint { color: var(--c-text-faint); }
 
 /* ── Superficies y acciones ──────────────────────────────────────────── */
 .zaha-clinical .panel {
@@ -257,6 +286,20 @@
 }
 .zaha-clinical .cbtn-secondary:hover { background: var(--c-surface-alt); }
 .zaha-clinical .cbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+/* Botón usado como opción de una lista (ACVPU, escalas). El texto arranca a la
+   izquierda y alinea con el de las otras opciones: centrado, cada etiqueta cae
+   en un lugar distinto y comparar las cinco obliga a leerlas todas. */
+.zaha-clinical .cbtn-start { justify-content: flex-start; }
+/* Botón reducido. SOLO para acciones que NO son clínicas: salir de la sesión,
+   cerrar un panel, navegación de chrome. Cualquier botón que enfermería toque
+   durante la ronda —con guantes, apurada, sobre una tablet apoyada en el
+   carro— va en el tamaño completo de 44px. Bajar de ahí un botón clínico es
+   la clase de ahorro visual que se paga con una carga mal hecha. */
+.zaha-clinical .cbtn-sm {
+  min-height: 36px;
+  padding: 0 var(--cs-3);
+  font-size: 14px;
+}
 
 .zaha-clinical .cinput {
   width: 100%;
@@ -281,6 +324,17 @@
   border-color: var(--c-text);
 }
 
+/* ── Números alineados ───────────────────────────────────────────────────
+   Cifras que se leen en columna (camas, scores, vitales) tienen que alinear
+   dígito a dígito: si no, comparar dos filas de un vistazo obliga a leer cada
+   número entero. No depende de estar dentro de una tabla — la sala se renderiza
+   como lista de tarjetas y necesita lo mismo.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .col-num {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+}
+
 /* ── Tabla de pacientes ──────────────────────────────────────────────── */
 .zaha-clinical .ctable { width: 100%; border-collapse: collapse; font-size: 15px; }
 .zaha-clinical .ctable th {
@@ -298,10 +352,6 @@
   vertical-align: middle;
 }
 .zaha-clinical .ctable tbody tr:hover { background: var(--c-surface); }
-.zaha-clinical .ctable .col-num {
-  font-family: var(--font-numeric);
-  font-variant-numeric: tabular-nums;
-}
 
 /* ── Dato faltante ───────────────────────────────────────────────────────
    Un vital sin cargar NO es un vital normal. NEWS2 sobre datos incompletos

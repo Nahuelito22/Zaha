@@ -7,9 +7,19 @@ Dos capas separadas a propósito. No se mezclan.
 | **Marca** | `brand.css` | Landing `/`, splash, login/registro, onboarding, ícono de app, footer | Paleta tierra completa (terracota + salvia) |
 | **Clínica** | `clinical.css` | Todo `/app`: dashboard, carga de vitales, detalle, alertas | Neutros fríos de alto contraste + acento azul |
 
-La capa clínica se activa poniendo `class="zaha-clinical"` en el contenedor raíz de `/app`.
-Todos sus tokens y clases están namespaceados bajo esa clase, así que las dos hojas pueden
-convivir en el mismo bundle sin pisarse.
+La capa clínica se activa poniendo `class="zaha-clinical"` en el contenedor raíz de cada
+pantalla de `/app`. Todos sus tokens y clases están namespaceados bajo esa clase.
+
+> ⚠️ **La simetría no existe: `brand.css` NO está namespaceado.** Define sobre `:root` y
+> `body` globales, así que importarlo en el bundle de `app/clinical` pisaría la capa
+> clínica de TODA la aplicación, no solo de la pantalla que lo pida — exactamente el
+> escenario de fatiga de alarma que estas dos capas existen para evitar. Antes de aplicar
+> la capa de marca al login (SCRUM-36) hay que encerrar `brand.css` bajo una clase raíz,
+> igual que `clinical.css`.
+>
+> Por eso la clase clínica va en la raíz de **cada pantalla** y no en la raíz de la
+> aplicación: el login pertenece a la capa de marca, y colgarla del root lo metía a la
+> fuerza en la capa equivocada.
 
 ## Por qué están separadas
 
@@ -40,7 +50,16 @@ contradice el trabajo.
   `.score-incomplete` y los vitales sin cargar con `.missing`.
 - **Antigüedad visible.** Un NEWS2 de hace 6 h no vale lo mismo que uno de hace 10 min:
   `.staleness` / `.staleness-overdue`.
-- **Targets de 44 px mínimo.** Se carga con guantes, en una tablet, de pie.
+- **Targets de 44 px mínimo.** Se carga con guantes, en una tablet, de pie. `.cbtn-sm`
+  (36 px) existe **solo** para chrome no clínico: salir de la sesión, cerrar un panel.
+  Ningún botón que se toque durante la ronda baja de 44 px.
+- **Nada de tamaños de texto sueltos.** La escala de cuerpo es `.ctext-lead` (16) /
+  `.ctext` (15) / `.ctext-sm` (14) / `.ctext-xs` (13) / `.ctext-2xs` (12), y el color
+  secundario es `.ctext-muted`. Si hace falta un sexto tamaño, se agrega acá, no en la
+  pantalla.
+- **`.ctext-faint` nunca lleva información clínica.** Da 3.0:1 sobre el fondo y no alcanza
+  AA; sirve para un placeholder o un separador. `.ctext-muted` sí es legible (6.1:1, pasa
+  AA y AAA para texto normal).
 - Iconografía funcional convencional en `/app`. Los 5 íconos de marca (caminos de la vida,
   corazón, sol, tierra, equilibrio) son para landing y onboarding.
 

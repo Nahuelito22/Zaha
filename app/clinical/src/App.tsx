@@ -17,18 +17,14 @@ function Encabezado() {
       </Link>
       {perfil && (
         <div className="flex items-center gap-4">
-          <span className="text-right text-[13px] leading-tight">
+          <span className="ctext-xs text-right leading-tight">
             <span className="block font-semibold">{perfil.full_name}</span>
-            <span style={{ color: 'var(--c-text-muted)' }}>
+            <span className="ctext-muted">
               {ROL_LEGIBLE[perfil.role]}
               {perfil.license_id ? ` · ${perfil.license_id}` : ''}
             </span>
           </span>
-          <button
-            className="cbtn cbtn-secondary"
-            style={{ minHeight: 36, fontSize: 14 }}
-            onClick={salir}
-          >
+          <button className="cbtn cbtn-secondary cbtn-sm" onClick={salir}>
             Salir
           </button>
         </div>
@@ -46,14 +42,16 @@ function Privado({ children }: { children: React.ReactNode }) {
   const { session, perfil, cargando } = useSesion()
 
   if (cargando) return null
+  // El login queda deliberadamente FUERA de `zaha-clinical`: es una pantalla
+  // de marca, no clínica, y trae su propia capa. Ver el comentario en Login.
   if (!session) return <Login />
 
   if (!perfil) {
     return (
-      <div className="mx-auto max-w-md px-5 py-10">
+      <div className="zaha-clinical mx-auto max-w-md px-5 py-10">
         <div className="panel flex flex-col gap-2">
-          <p className="text-[15px] font-semibold">Tu usuario no tiene perfil activo.</p>
-          <p className="text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
+          <p className="ctext font-semibold">Tu usuario no tiene perfil activo.</p>
+          <p className="ctext-sm ctext-muted">
             No vas a poder ver ni cargar datos hasta que jefatura habilite tu
             cuenta.
           </p>
@@ -63,7 +61,7 @@ function Privado({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="zaha-clinical flex min-h-full flex-col">
       <Encabezado />
       <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-6">{children}</main>
     </div>
@@ -72,7 +70,7 @@ function Privado({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="zaha-clinical min-h-full">
+    <div className="min-h-full">
       <SesionProvider>
         <BrowserRouter basename="/app">
           <Routes>

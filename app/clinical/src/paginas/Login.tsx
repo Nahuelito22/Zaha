@@ -1,6 +1,20 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '../lib/supabase'
 
+/**
+ * Login.
+ *
+ * Es la ÚNICA pantalla de este bundle que pertenece a la capa de MARCA y no a
+ * la clínica (design_system/README.md): el login, la landing y el onboarding
+ * llevan la paleta tierra; `/app` no. Hoy sigue montando `zaha-clinical` para
+ * no quedar sin estilos, y ese es exactamente el trabajo de SCRUM-36:
+ * reemplazar esa clase por la capa de marca.
+ *
+ * OJO al hacerlo: `brand.css` NO está namespaceado — define sobre `:root` y
+ * `body`, así que importarlo en este bundle pisaría la capa clínica de toda la
+ * aplicación, no solo de esta pantalla. Antes de aplicarlo hay que encerrarlo
+ * bajo una clase raíz, igual que `clinical.css`.
+ */
 export function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -26,12 +40,10 @@ export function Login() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-6 py-12">
+    <div className="zaha-clinical mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-6 py-12">
       <div>
         <h1>Zaha</h1>
-        <p className="text-[15px]" style={{ color: 'var(--c-text-muted)' }}>
-          Soporte a la decisión clínica
-        </p>
+        <p className="ctext ctext-muted">Soporte a la decisión clínica</p>
       </div>
 
       <form onSubmit={entrar} className="panel flex flex-col gap-4">
@@ -40,7 +52,6 @@ export function Login() {
           <input
             type="email"
             className="cinput"
-            style={{ fontSize: 16 }}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
@@ -53,7 +64,6 @@ export function Login() {
           <input
             type="password"
             className="cinput"
-            style={{ fontSize: 16 }}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="current-password"
@@ -66,7 +76,7 @@ export function Login() {
         </button>
 
         {error && (
-          <p role="alert" className="text-[14px] font-semibold">
+          <p role="alert" className="ctext-sm font-semibold">
             {error}
           </p>
         )}
