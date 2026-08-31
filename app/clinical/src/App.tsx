@@ -3,6 +3,7 @@ import { SesionProvider, useSesion } from './auth/sesion'
 import { Login } from './paginas/Login'
 import { Sala } from './paginas/Sala'
 import { CargarVitales } from './paginas/CargarVitales'
+import { DetallePaciente } from './paginas/DetallePaciente'
 import { ROL_LEGIBLE } from './lib/tipos'
 
 function Encabezado() {
@@ -87,6 +88,14 @@ export default function App() {
               element={
                 <Privado>
                   <CargarVitales />
+                </Privado>
+              }
+            />
+            <Route
+              path="/paciente/:encounterId"
+              element={
+                <Privado>
+                  <DetallePaciente />
                 </Privado>
               }
             />

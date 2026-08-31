@@ -84,3 +84,94 @@ export const RANGOS = {
 } as const
 
 export type CampoNumerico = keyof typeof RANGOS
+
+/**
+ * Una observación con el aporte de cada parámetro, tal como la devuelve la
+ * vista `vital_records_desglose`. Los `sc_*` los calcula la base con las mismas
+ * funciones que el trigger: acá nunca se recalcula NEWS2.
+ */
+export type VitalDesglose = {
+  id: string
+  recorded_at: string
+  respiratory_rate: number
+  oxygen_saturation: number
+  supplemental_oxygen: boolean
+  temperature: number
+  systolic_bp: number
+  heart_rate: number
+  consciousness_level: ACVPU
+  news2_score: number | null
+  risk_level: NivelRiesgo | null
+  single_red_flag: boolean | null
+  spo2_scale_used: number | null
+  amends_id: string | null
+  amendment_reason: string | null
+  superseded_by: string | null
+  sc_respiratory_rate: number
+  sc_oxygen_saturation: number
+  sc_supplemental_oxygen: number
+  sc_temperature: number
+  sc_systolic_bp: number
+  sc_heart_rate: number
+  sc_consciousness: number
+}
+
+/**
+ * Los 7 parámetros en el orden de la escala NEWS2 publicada, que es el mismo
+ * en el que se cargan. Mantener ese orden no es cosmético: es el orden en el
+ * que enfermería tiene memorizada la escala, y cambiarlo obliga a buscar cada
+ * fila en vez de recorrerla.
+ */
+export const PARAMETROS_NEWS2: Array<{
+  etiqueta: string
+  sub: keyof VitalDesglose
+  valor: (r: VitalDesglose) => string
+}> = [
+  {
+    etiqueta: 'Frecuencia respiratoria',
+    sub: 'sc_respiratory_rate',
+    valor: (r) => `${r.respiratory_rate} rpm`,
+  },
+  {
+    etiqueta: 'Saturación de oxígeno',
+    sub: 'sc_oxygen_saturation',
+    valor: (r) => `${r.oxygen_saturation} %`,
+  },
+  {
+    etiqueta: 'Oxígeno suplementario',
+    sub: 'sc_supplemental_oxygen',
+    valor: (r) => (r.supplemental_oxygen ? 'Con oxígeno' : 'Aire ambiente'),
+  },
+  {
+    etiqueta: 'Temperatura',
+    sub: 'sc_temperature',
+    valor: (r) => `${r.temperature} °C`,
+  },
+  {
+    etiqueta: 'Presión sistólica',
+    sub: 'sc_systolic_bp',
+    valor: (r) => `${r.systolic_bp} mmHg`,
+  },
+  {
+    etiqueta: 'Frecuencia cardíaca',
+    sub: 'sc_heart_rate',
+    valor: (r) => `${r.heart_rate} lpm`,
+  },
+  {
+    etiqueta: 'Consciencia (ACVPU)',
+    sub: 'sc_consciousness',
+    valor: (r) =>
+      OPCIONES_ACVPU.find((o) => o.valor === r.consciousness_level)?.texto ??
+      r.consciousness_level,
+  },
+]
+
+/** "14/09 08:30". Fecha y hora de la observación, no de la carga. */
+export function fechaHora(iso: string): string {
+  return new Date(iso).toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
