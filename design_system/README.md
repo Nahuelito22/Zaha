@@ -10,16 +10,28 @@ Dos capas separadas a propósito. No se mezclan.
 La capa clínica se activa poniendo `class="zaha-clinical"` en el contenedor raíz de cada
 pantalla de `/app`. Todos sus tokens y clases están namespaceados bajo esa clase.
 
-> ⚠️ **La simetría no existe: `brand.css` NO está namespaceado.** Define sobre `:root` y
-> `body` globales, así que importarlo en el bundle de `app/clinical` pisaría la capa
-> clínica de TODA la aplicación, no solo de la pantalla que lo pida — exactamente el
-> escenario de fatiga de alarma que estas dos capas existen para evitar. Antes de aplicar
-> la capa de marca al login (SCRUM-36) hay que encerrar `brand.css` bajo una clase raíz,
-> igual que `clinical.css`.
->
-> Por eso la clase clínica va en la raíz de **cada pantalla** y no en la raíz de la
-> aplicación: el login pertenece a la capa de marca, y colgarla del root lo metía a la
-> fuerza en la capa equivocada.
+La capa de marca se activa igual: `class="zaha-brand"` en el contenedor raíz. **Las dos
+están namespaceadas desde SCRUM-36** — antes `brand.css` definía sobre `:root` y `body`, así
+que bastaba importarla en un bundle para teñir la aplicación entera. Conviven en el mismo
+bundle solo mientras las dos sigan namespaceadas: si se vuelve a bajar el tema desde Claude
+Design, hay que volver a envolverlo, porque la exportación no trae la clase raíz.
+
+La clase va en la raíz de **cada pantalla**, no en la de la aplicación: dentro de
+`app/clinical` el login es de marca y el resto es clínico.
+
+### Dos trampas de integración, ya pagadas
+
+**El sistema de diseño va en `@layer components`.** Tailwind v4 mete todo lo suyo en capas,
+y en CSS el código **sin capa le gana a cualquier capa**, sin importar la especificidad. Con
+las hojas importadas sin capa, `.panel` le ganaba a `px-4` y el `margin: 0` de la marca le
+ganaba a `mx-auto`: las utilidades quedaban decorativas y el síntoma no se parecía en nada a
+la causa. Los `@import` llevan `layer(components)` y arriba va la sentencia
+`@layer theme, base, components, utilities;`.
+
+**Las tipografías las carga la página con `<link>`, no las hojas.** Un `@import` de CSS solo
+es válido antes de cualquier regla; al concatenar las dos capas en un bundle, el `@import` de
+la segunda queda después de las reglas de la primera y el bundler lo descarta **en silencio**.
+La fuente no carga y nada falla de forma visible.
 
 ## Por qué están separadas
 

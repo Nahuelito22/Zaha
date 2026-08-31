@@ -18,8 +18,12 @@
    déficit de visión al color; en una guardia con luz mala y una tablet
    barata, el color solo no es una señal confiable.
    ═══════════════════════════════════════════════════════════════════════ */
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
 
+/* TIPOGRAFÍA (Figtree): la carga la PÁGINA con <link>, no esta hoja.
+   Un @import de CSS solo es válido antes de cualquier regla, y cuando las dos
+   capas se concatenan en un mismo bundle la segunda queda después de las reglas
+   de la primera y el bundler la descarta en silencio: la fuente no carga y nada
+   falla de forma visible. Ver app/clinical/index.html y la landing. */
 .zaha-clinical {
   /* — Superficie: neutros fríos de alto contraste, sin calidez de marca — */
   --c-bg:            #ffffff;

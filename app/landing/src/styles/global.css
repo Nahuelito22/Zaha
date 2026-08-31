@@ -1,1 +1,10 @@
+/* Ver el comentario largo en app/clinical/src/index.css: el sistema de diseño
+   va en la capa `components` para que las utilidades de Tailwind puedan
+   ajustarlo desde el markup. Sin capa le ganaría a todas. */
+@layer theme, base, components, utilities;
+
+/* La landing es territorio de MARCA. Se activa con class="zaha-brand" en el
+   <body>. La capa clínica no entra acá. Las tipografías las carga la página
+   con <link>, no esta hoja. */
+@import "../../../../design_system/brand.css" layer(components);
 @import "tailwindcss";

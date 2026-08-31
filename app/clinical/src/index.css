@@ -1,13 +1,30 @@
-/* El sistema de diseño va PRIMERO: clinical.css trae su propio @import de la
-   tipografía, y un @import solo es válido si precede a toda otra regla. Si
-   Tailwind va antes, la fuente queda mal ubicada y el bundler avisa.
+/* Orden de capas de la cascada. Va primero porque una sentencia @layer es lo
+   único que puede preceder a un @import.
 
-   Capa clínica del sistema de diseño. Se activa con class="zaha-clinical".
-   La capa de MARCA (crema, terracota, Caprasimo) queda deliberadamente fuera
-   de la app: la terracota ocupa el mismo rango cromático que el ámbar de
-   alerta, y si tiñe la interfaz, los elementos neutros parecen alerta y la
-   alerta real deja de destacar. La marca vive en la landing y en el login. */
-@import '../../../design_system/clinical.css';
+   POR QUÉ EXISTE: Tailwind v4 mete todo lo suyo en @layer, y en CSS el código
+   SIN capa le gana a cualquier capa, sin importar la especificidad. Con el
+   sistema de diseño importado sin capa, `.panel` le ganaba a `px-4` y el
+   `margin: 0` de la capa de marca le ganaba a `mx-auto`: las utilidades de
+   Tailwind quedaban decorativas y el bug no se parecía en nada a su causa.
+
+   Importando el sistema en `components`, las utilities de Tailwind quedan por
+   encima y se puede volver a ajustar un caso puntual desde el markup — que es
+   justo para lo que sirven. */
+@layer theme, base, components, utilities;
+
+/* Las dos capas conviven en este bundle porque las dos están namespaceadas:
+   clinical.css cuelga de .zaha-clinical y brand.css de .zaha-brand. Ninguna
+   define sobre :root ni body, así que ninguna puede teñir a la otra.
+
+   Quién usa cuál: `/app` es clínico —neutros fríos, con rojo/ámbar/verde
+   reservados en exclusiva a los niveles de riesgo NEWS2— y el LOGIN es de
+   marca. La terracota ocupa el mismo rango cromático que el ámbar de alerta:
+   si tiñe la interfaz clínica, lo neutro parece alerta y la alerta real deja
+   de destacar. En una pantalla sin datos de paciente ese riesgo no existe.
+
+   Las tipografías las carga index.html con <link>, no estas hojas. */
+@import '../../../design_system/clinical.css' layer(components);
+@import '../../../design_system/brand.css' layer(components);
 @import 'tailwindcss';
 
 html,

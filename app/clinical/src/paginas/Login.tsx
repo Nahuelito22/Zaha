@@ -6,14 +6,18 @@ import { supabase } from '../lib/supabase'
  *
  * Es la ÚNICA pantalla de este bundle que pertenece a la capa de MARCA y no a
  * la clínica (design_system/README.md): el login, la landing y el onboarding
- * llevan la paleta tierra; `/app` no. Hoy sigue montando `zaha-clinical` para
- * no quedar sin estilos, y ese es exactamente el trabajo de SCRUM-36:
- * reemplazar esa clase por la capa de marca.
+ * llevan la paleta tierra; `/app` no.
  *
- * OJO al hacerlo: `brand.css` NO está namespaceado — define sobre `:root` y
- * `body`, así que importarlo en este bundle pisaría la capa clínica de toda la
- * aplicación, no solo de esta pantalla. Antes de aplicarlo hay que encerrarlo
- * bajo una clase raíz, igual que `clinical.css`.
+ * Por qué acá sí y en `/app` no: la regla que separa las capas es que la
+ * terracota ocupa el mismo rango cromático que el ámbar de alerta NEWS2, así
+ * que teñir la interfaz clínica hace que lo neutro parezca alerta y que la
+ * alerta real deje de destacar. En una pantalla sin un solo dato de paciente
+ * ese riesgo no existe, y sí importa que la primera impresión sea la marca.
+ *
+ * Las clases son las de `brand.css` (`card`, `input`, `btn`), NO las de la
+ * capa clínica (`panel`, `cinput`, `cbtn`): las dos capas no comparten nombres.
+ * Los modificadores `-touch` traen de vuelta el mínimo de 44px, porque esto se
+ * usa en la misma tablet y con los mismos guantes que el resto.
  */
 export function Login() {
   const [email, setEmail] = useState('')
@@ -40,47 +44,55 @@ export function Login() {
   }
 
   return (
-    <div className="zaha-clinical mx-auto flex min-h-full w-full max-w-sm flex-col justify-center gap-6 px-6 py-12">
-      <div>
-        <h1>Zaha</h1>
-        <p className="ctext ctext-muted">Soporte a la decisión clínica</p>
+    <div className="zaha-brand flex min-h-dvh w-full items-center justify-center px-6 py-12">
+      <div className="flex w-full max-w-sm flex-col gap-6">
+        <div>
+          <h1>Zaha</h1>
+          <p className="text-muted">Soporte a la decisión clínica</p>
+        </div>
+
+        <form onSubmit={entrar} className="card">
+          <div className="field">
+            <label htmlFor="login-email">Correo</label>
+            <input
+              id="login-email"
+              type="email"
+              className="input input-touch"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="username"
+              required
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="login-password">Contraseña</label>
+            <input
+              id="login-password"
+              type="password"
+              className="input input-touch"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn btn-primary btn-block btn-touch"
+            disabled={cargando}
+          >
+            {cargando ? 'Entrando…' : 'Entrar'}
+          </button>
+
+          {error && (
+            <p role="alert" className="form-error">
+              {error}
+            </p>
+          )}
+        </form>
       </div>
-
-      <form onSubmit={entrar} className="panel flex flex-col gap-4">
-        <label className="flex flex-col gap-1.5">
-          <span className="vital-label">Correo</span>
-          <input
-            type="email"
-            className="cinput"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            required
-          />
-        </label>
-
-        <label className="flex flex-col gap-1.5">
-          <span className="vital-label">Contraseña</span>
-          <input
-            type="password"
-            className="cinput"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </label>
-
-        <button type="submit" className="cbtn cbtn-primary" disabled={cargando}>
-          {cargando ? 'Entrando…' : 'Entrar'}
-        </button>
-
-        {error && (
-          <p role="alert" className="ctext-sm font-semibold">
-            {error}
-          </p>
-        )}
-      </form>
     </div>
   )
 }

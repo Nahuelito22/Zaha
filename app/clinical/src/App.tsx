@@ -42,8 +42,8 @@ function Privado({ children }: { children: React.ReactNode }) {
   const { session, perfil, cargando } = useSesion()
 
   if (cargando) return null
-  // El login queda deliberadamente FUERA de `zaha-clinical`: es una pantalla
-  // de marca, no clínica, y trae su propia capa. Ver el comentario en Login.
+  // El login queda FUERA de `zaha-clinical`: monta `zaha-brand`, que es la
+  // capa que le corresponde. Ver el comentario en Login.
   if (!session) return <Login />
 
   if (!perfil) {

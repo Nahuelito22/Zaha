@@ -1,17 +1,43 @@
 ---
-
+import '../styles/global.css'
 ---
 
-<html lang="en">
+<html lang="es-AR">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="stylesheet"
+			href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap"
+		/>
+		<meta
+			name="description"
+			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería."
+		/>
+		<title>Zaha — Soporte a la decisión clínica</title>
 	</head>
-	<body>
-		<h1>Astro</h1>
+	<!--
+		La capa de MARCA se activa acá, en el contenedor raíz. Todo lo que define
+		brand.css cuelga de esta clase; sin ella la página queda sin estilos.
+
+		Esto es un andamio, no la landing: SCRUM-35 escribe la página de verdad.
+		Lo que prueba es que la capa carga y aplica — tipografía Caprasimo sobre
+		fondo crema, botón terracota.
+	-->
+	<body class="zaha-brand">
+		<main style="max-width: 640px; margin: 0 auto; padding: 64px 24px;">
+			<h1>Zaha</h1>
+			<p>
+				Soporte a la decisión clínica. Calcula NEWS2 sobre los signos vitales
+				cargados al pie de la cama y avisa temprano cuando un paciente se
+				está deteriorando.
+			</p>
+			<a class="btn btn-primary" href="/app/">Entrar a la aplicación</a>
+		</main>
 	</body>
 </html>
