@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { PESO_RIESGO, CLASE_RIESGO, type NivelRiesgo } from '../lib/tipos'
+import {
+  PESO_RIESGO,
+  PESO_SIN_SCORE,
+  CLASE_RIESGO,
+  type NivelRiesgo,
+} from '../lib/tipos'
 import { ChipRiesgo, antiguedad } from '../componentes/ChipRiesgo'
 
 type Cama = {
@@ -59,11 +64,13 @@ export function Sala() {
       })
     }
 
+    // Sin score no es lo mismo que riesgo bajo: es su propia categoría.
+    const peso = (c: Cama) =>
+      c.risk_level === null ? PESO_SIN_SCORE : PESO_RIESGO[c.risk_level]
+
     setCamas(
       [...porEpisodio.values()].sort(
-        (a, b) =>
-          PESO_RIESGO[a.risk_level ?? 'Bajo'] - PESO_RIESGO[b.risk_level ?? 'Bajo'] ||
-          (a.bed ?? '').localeCompare(b.bed ?? ''),
+        (a, b) => peso(a) - peso(b) || (a.bed ?? '').localeCompare(b.bed ?? ''),
       ),
     )
   }, [])
@@ -74,19 +81,19 @@ export function Sala() {
 
   if (error) {
     return (
-      <p role="alert" className="panel text-[15px]">
+      <p role="alert" className="panel ctext">
         No se pudo cargar la sala: {error}
       </p>
     )
   }
 
-  if (camas === null) return <p className="text-[15px]">Cargando sala…</p>
+  if (camas === null) return <p className="ctext">Cargando sala…</p>
 
   if (camas.length === 0) {
     return (
       <div className="panel flex flex-col gap-2">
-        <p className="text-[15px] font-semibold">No hay camas visibles.</p>
-        <p className="text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
+        <p className="ctext font-semibold">No hay camas visibles.</p>
+        <p className="ctext-sm ctext-muted">
           Si esperabas ver pacientes, las políticas de acceso están denegando la
           lectura. Verificá que tu perfil exista y esté activo.
         </p>
@@ -96,7 +103,7 @@ export function Sala() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+      <p className="ctext-xs ctext-muted">
         {camas.length} camas ocupadas · ordenadas por riesgo
       </p>
 
@@ -106,24 +113,26 @@ export function Sala() {
           return (
             <li
               key={c.encounter_id}
-              className={`panel risk-edge-${CLASE_RIESGO[c.risk_level ?? 'Bajo']}`}
-              style={{ padding: '12px 16px' }}
+              className={`panel px-4 py-3 ${
+                c.risk_level
+                  ? `risk-edge-${CLASE_RIESGO[c.risk_level]}`
+                  : 'score-incomplete'
+              }`}
             >
               <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span
-                  className="col-num w-14 shrink-0 text-[15px] font-bold"
-                  style={{ fontFamily: 'var(--font-numeric)' }}
-                >
+                <span className="col-num ctext w-14 shrink-0 font-bold">
                   {c.bed ?? '—'}
                 </span>
 
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[16px] font-semibold">
+                  <span className="ctext-lead block truncate font-semibold">
                     {c.paciente}
                   </span>
-                  <span className="text-[12px]" style={{ color: 'var(--c-text-muted)' }}>
+                  <span className="ctext-2xs ctext-muted">
                     {c.mrn} ·{' '}
-                    <span className={edad.vieja ? 'missing' : undefined}>
+                    <span
+                      className={`staleness${edad.vieja ? ' staleness-overdue' : ''}`}
+                    >
                       {edad.texto}
                     </span>
                   </span>
@@ -138,8 +147,7 @@ export function Sala() {
 
                 <Link
                   to={`/cargar/${c.encounter_id}`}
-                  className="cbtn cbtn-secondary"
-                  style={{ minHeight: 36, fontSize: 14 }}
+                  className="cbtn cbtn-secondary no-underline"
                 >
                   Cargar vitales
                 </Link>

@@ -112,9 +112,13 @@ export function CargarVitales() {
   }
 
   if (error && !episodio) {
-    return <p role="alert" className="panel">{error}</p>
+    return (
+      <p role="alert" className="panel ctext">
+        {error}
+      </p>
+    )
   }
-  if (!episodio) return <p className="text-[15px]">Cargando episodio…</p>
+  if (!episodio) return <p className="ctext">Cargando episodio…</p>
 
   const paciente = episodio.patients
     ? `${episodio.patients.last_name}, ${episodio.patients.first_name}`
@@ -126,13 +130,13 @@ export function CargarVitales() {
       <div className="flex flex-col gap-5">
         <div className="panel flex flex-col gap-3">
           <h2>Toma registrada</h2>
-          <p className="text-[15px]">
+          <p className="ctext">
             {paciente} · cama {episodio.bed ?? '—'}
           </p>
 
           <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-baseline gap-1">
-              <span className="vital-value" style={{ fontSize: 34 }}>
+              <span className="vital-value vital-value-lg">
                 {guardado.news2_score}
               </span>
               <span className="vital-unit">NEWS2</span>
@@ -144,13 +148,13 @@ export function CargarVitales() {
               eleva el nivel: con un total de 5 o más, el nivel ya viene del
               puntaje y decir "aunque el total sea bajo" seria falso. */}
           {guardado.single_red_flag && guardado.risk_level === 'Medio Bajo' && (
-            <p className="text-[14px] font-semibold">
+            <p className="ctext-sm font-semibold">
               El puntaje total es bajo, pero hay un parámetro aislado en 3. Por
               esa sola razón el nivel sube a Medio Bajo y requiere revisión.
             </p>
           )}
 
-          <p className="text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+          <p className="ctext-xs ctext-muted">
             El puntaje lo calculó la base de datos, no esta pantalla. El registro
             ya no se puede editar: si hay un error, se corrige cargando una
             enmienda con su motivo.
@@ -182,7 +186,7 @@ export function CargarVitales() {
     <form onSubmit={guardar} className="flex flex-col gap-5">
       <div>
         <h2>{paciente}</h2>
-        <p className="text-[14px]" style={{ color: 'var(--c-text-muted)' }}>
+        <p className="ctext-sm ctext-muted">
           {episodio.ward} · cama {episodio.bed ?? '—'} ·{' '}
           {episodio.patients?.mrn}
         </p>
@@ -191,7 +195,7 @@ export function CargarVitales() {
       {/* La escala de SpO2 es una PRESCRIPCIÓN médica y cambia cómo puntúa la
           saturación. Se muestra siempre, y enfermería no puede tocarla. */}
       {episodio.spo2_scale === 2 && (
-        <div className="panel text-[14px]">
+        <div className="panel ctext-sm">
           <strong>Escala de SpO₂ 2 (hipercapnia).</strong> Objetivo de saturación
           prescrito 88–92%. La saturación puntúa con esta escala, no con la
           estándar. Solo medicina puede cambiarla.
@@ -221,7 +225,7 @@ export function CargarVitales() {
                 required
               />
               {malo && (
-                <span id={`${campo}-error`} className="text-[12px] font-semibold">
+                <span id={`${campo}-error`} className="ctext-2xs font-semibold">
                   Fuera del rango posible ({r.min}–{r.max} {r.unidad}). Revisá el
                   valor cargado.
                 </span>
@@ -261,21 +265,22 @@ export function CargarVitales() {
               key={o.valor}
               type="button"
               aria-pressed={acvpu === o.valor}
-              className={`cbtn ${acvpu === o.valor ? 'cbtn-primary' : 'cbtn-secondary'}`}
-              style={{ justifyContent: 'flex-start' }}
+              className={`cbtn cbtn-start ${
+                acvpu === o.valor ? 'cbtn-primary' : 'cbtn-secondary'
+              }`}
               onClick={() => setAcvpu(o.valor)}
             >
-              <span className="vital-value" style={{ fontSize: 17, width: 20 }}>
-                {o.sigla}
-              </span>
-              <span style={{ fontWeight: 500 }}>{o.texto}</span>
+              {/* Ancho fijo para que las 5 siglas alineen y el significado
+                  de cada una arranque en la misma columna. */}
+              <span className="vital-value w-5 text-[17px]">{o.sigla}</span>
+              <span className="font-medium">{o.texto}</span>
             </button>
           ))}
         </div>
       </fieldset>
 
       {error && (
-        <p role="alert" className="panel text-[14px] font-semibold">
+        <p role="alert" className="panel ctext-sm font-semibold">
           No se pudo guardar: {error}
         </p>
       )}
@@ -294,7 +299,7 @@ export function CargarVitales() {
       </div>
 
       {!completo && (
-        <p className="text-[13px]" style={{ color: 'var(--c-text-muted)' }}>
+        <p className="ctext-xs ctext-muted">
           Faltan parámetros. NEWS2 sobre datos incompletos no es un NEWS2 válido,
           así que se cargan los 7 o no se guarda.
         </p>
