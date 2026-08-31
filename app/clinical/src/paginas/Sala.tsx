@@ -125,9 +125,12 @@ export function Sala() {
                 </span>
 
                 <span className="min-w-0 flex-1">
-                  <span className="ctext-lead block truncate font-semibold">
+                  <Link
+                    to={`/paciente/${c.encounter_id}`}
+                    className="ctext-lead block truncate font-semibold"
+                  >
                     {c.paciente}
-                  </span>
+                  </Link>
                   <span className="ctext-2xs ctext-muted">
                     {c.mrn} ·{' '}
                     <span
