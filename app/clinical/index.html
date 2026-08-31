@@ -7,7 +7,11 @@
     <title>Zaha — Soporte a la decisión clínica</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap" />
+    <!-- Las dos capas del sistema de diseño: Figtree para la clínica, Caprasimo
+         para los títulos de marca del login. En un solo pedido. Se cargan acá y
+         no con @import desde el CSS: al concatenar las dos hojas en un bundle,
+         un @import que queda después de una regla se descarta en silencio. -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&display=swap" />
   </head>
   <body>
     <div id="root"></div>
