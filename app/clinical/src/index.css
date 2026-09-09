@@ -27,6 +27,27 @@
 @import '../../../design_system/brand.css' layer(components);
 @import 'tailwindcss';
 
+/* EL BREAKPOINT ANCHO — se define UNA vez, acá, y se usa como `ancho:` en el
+   markup (SCRUM-42).
+
+   La app es mobile-first estricta: hasta ahora todo vivía entre `sm:` (640px)
+   y un tope de `max-w-3xl`, porque el caso de uso es la tablet VERTICAL al pie
+   de la cama (HU-01). El tablero de triage de la HU-06 es el primer caso que
+   pide otra cosa: jefatura mirando toda la sala a la vez, que en una lista de
+   tarjetas obliga a scrollear y no deja comparar.
+
+   1024px = tablet ACOSTADA, no monitor. Es el corte deliberado: una tablet
+   vertical (768–800 px) sigue viendo tarjetas al pie de la cama, y la tabla
+   aparece recién cuando el dispositivo se gira o se apoya en el carro del
+   office. El hardware del que habla la carta magna es tablet, así que el
+   breakpoint se define en términos de tablet.
+
+   Regla: si aparece un segundo número mágico de ancho en cualquier archivo,
+   está mal. Se usa `ancho:` o se cambia acá. */
+@theme {
+  --breakpoint-ancho: 1024px;
+}
+
 html,
 body,
 #root {

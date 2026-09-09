@@ -65,7 +65,13 @@ function Privado({ children }: { children: React.ReactNode }) {
   return (
     <div className="zaha-clinical flex min-h-full flex-col">
       <Encabezado />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-6">
+      {/* El tope de 3xl (768px) es el ancho de lectura cómodo de un formulario
+          y se mantiene como norma. `ancho:` lo levanta solo en tablet acostada,
+          donde la sala se muestra como tabla y necesita las seis columnas: si
+          el contenedor siguiera capado, la tabla scrollearía dentro de una
+          franja angosta en el medio de una pantalla vacía. Ver el comentario
+          del breakpoint en index.css. */}
+      <main className="ancho:max-w-6xl mx-auto w-full max-w-3xl flex-1 px-5 py-6">
         {/* Va acá y no dentro de cada página: lo pendiente de enviar es estado
             de la sesión, no de la pantalla en la que se esté parado. */}
         <EstadoCola />
