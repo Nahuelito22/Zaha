@@ -74,6 +74,13 @@ contradice el trabajo.
   AA y AAA para texto normal).
 - Iconografía funcional convencional en `/app`. Los 5 íconos de marca (caminos de la vida,
   corazón, sol, tierra, equilibrio) son para landing y onboarding.
+- **Un solo breakpoint ancho: `ancho:` = 1024 px**, declarado una única vez en
+  `app/clinical/src/index.css` (`@theme { --breakpoint-ancho }`). 1024 es **tablet
+  acostada**, no monitor: la tablet vertical al pie de la cama (768–800 px) se queda del
+  lado angosto a propósito. Debajo de ese corte la app es mobile-first estricta —`sm:`
+  (640) y tope `max-w-3xl`—, y `.ctable` **solo** puede aparecer arriba de él. Si aparece
+  un segundo número mágico de ancho en cualquier archivo, está mal: se usa `ancho:` o se
+  cambia el token.
 
 ## Origen
 
