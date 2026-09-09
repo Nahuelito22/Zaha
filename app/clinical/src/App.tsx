@@ -4,6 +4,7 @@ import { Login } from './paginas/Login'
 import { Sala } from './paginas/Sala'
 import { CargarVitales } from './paginas/CargarVitales'
 import { DetallePaciente } from './paginas/DetallePaciente'
+import { EstadoCola } from './componentes/EstadoCola'
 import { ROL_LEGIBLE } from './lib/tipos'
 
 function Encabezado() {
@@ -64,7 +65,12 @@ function Privado({ children }: { children: React.ReactNode }) {
   return (
     <div className="zaha-clinical flex min-h-full flex-col">
       <Encabezado />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-6">{children}</main>
+      <main className="mx-auto w-full max-w-3xl flex-1 px-5 py-6">
+        {/* Va acá y no dentro de cada página: lo pendiente de enviar es estado
+            de la sesión, no de la pantalla en la que se esté parado. */}
+        <EstadoCola />
+        {children}
+      </main>
     </div>
   )
 }
