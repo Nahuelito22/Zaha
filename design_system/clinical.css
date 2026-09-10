@@ -29,8 +29,16 @@
   --c-bg:            #ffffff;
   --c-surface:       #f6f7f9;
   --c-surface-alt:   #eceef2;
+  /* 1.40:1 sobre --c-bg, y está bien: solo separa (borde de .panel, línea
+     entre filas). WCAG 1.4.11 pide 3:1 para lo que delimita un COMPONENTE,
+     no para un divisor decorativo. Si alguna vez delimita un control, usar
+     --c-border-strong. Ver SCRUM-45. */
   --c-border:        #d6dae1;
-  --c-border-strong: #a8b0bb;
+  /* 3.65:1 sobre --c-bg. Delimita componentes (input, botón secundario,
+     cabecera de tabla), así que WCAG 1.4.11 le exige 3:1 como mínimo: es el
+     borde lo único que dice dónde empieza y termina un campo. El valor
+     anterior (#a8b0bb) daba 2.19:1 y no llegaba. Ver SCRUM-45. */
+  --c-border-strong: #7b8798;
   --c-text:          #14171c;
   --c-text-muted:    #5a636f;
   --c-text-faint:    #8b95a1;
@@ -150,13 +158,22 @@
   background: var(--c-risk-med-bg);
   border-color: var(--c-risk-med-border);
 }
+/* Triángulo HUECO. El truco de bordes que había acá dibujaba un triángulo
+   SÓLIDO, idéntico al de .risk-high: Medio y Alto quedaban separados solo por
+   color, que es exactamente lo que esta capa promete no hacer — y en los dos
+   niveles donde confundirse cuesta más caro. Se dibuja con un triángulo
+   interior del color del chip, que deja el contorno a la vista. Ver SCRUM-45. */
 .zaha-clinical .risk-med .risk-glyph {
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
-  background: transparent;
-  border-bottom: 12px solid currentColor;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  height: 0;
+  background: currentColor;
+  position: relative;
+}
+.zaha-clinical .risk-med .risk-glyph::after {
+  content: "";
+  position: absolute;
+  inset: 4px 2px 2px;
+  background: var(--c-risk-med-bg);
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 .zaha-clinical .risk-high {
   color: var(--c-risk-high);
@@ -252,7 +269,9 @@
    secundario plenamente legible: 6.1:1, pasa AA y AAA para texto normal.
    `faint` da 3.0:1 — NO alcanza AA. Sirve para lo que debe quedar en segundo
    plano (un placeholder, un separador), y nunca para información clínica.
-   Un vital, un score o un motivo de enmienda jamás van en faint. */
+   Un vital, un score o un motivo de enmienda jamás van en faint.
+   La auditoría de SCRUM-45 encontró que `.missing` ("sin score") lo estaba
+   usando, que es exactamente el caso que esta regla prohíbe; se pasó a muted. */
 .zaha-clinical .ctext-muted { color: var(--c-text-muted); }
 .zaha-clinical .ctext-faint { color: var(--c-text-faint); }
 
@@ -361,8 +380,12 @@
    Un vital sin cargar NO es un vital normal. NEWS2 sobre datos incompletos
    no es un NEWS2 válido, y la interfaz tiene que decirlo explícitamente.
    ───────────────────────────────────────────────────────────────────── */
+/* `muted` y no `faint`: "sin score" es información clínica —dice que ese
+   paciente no tiene NEWS2 calculado— y faint da 3.0:1, que no pasa AA.
+   Justamente el dato que no hay que poder pasar por alto no puede ser el
+   menos legible de la pantalla. La bastardilla queda como segundo canal. */
 .zaha-clinical .missing {
-  color: var(--c-text-faint);
+  color: var(--c-text-muted);
   font-style: italic;
 }
 .zaha-clinical .score-incomplete {
