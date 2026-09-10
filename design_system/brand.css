@@ -122,7 +122,10 @@
   font-size: 11px; margin-top: var(--space-1);
   color: color-mix(in srgb, var(--color-text) 55%, transparent);
 }
-.zaha-brand .text-muted { color: color-mix(in srgb, var(--color-text) 55%, transparent); }
+/* 65% y no 55%: al 55% da 3.57:1 sobre el fondo crema y no pasa AA. `muted`
+   significa secundario, no ilegible — y en la landing esta clase lleva la
+   atribución que la licencia ODbL del dataset obliga a mostrar. Ver SCRUM-35. */
+.zaha-brand .text-muted { color: color-mix(in srgb, var(--color-text) 65%, transparent); }
 .zaha-brand :focus { outline: none; }
 .zaha-brand :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .zaha-brand ::selection { background: color-mix(in srgb, var(--color-accent) 30%, transparent); }
@@ -212,7 +215,8 @@
 .zaha-brand .card-body { margin: 0; font-size: 13px; opacity: 0.8; flex: 1; }
 .zaha-brand .card-meta {
   display: flex; align-items: center; gap: 6px; font-size: 11px;
-  color: color-mix(in srgb, var(--color-text) 50%, transparent);
+  /* 65%: al 50% daba 2.99:1 sobre la superficie de la tarjeta. Ver SCRUM-35. */
+  color: color-mix(in srgb, var(--color-text) 65%, transparent);
 }
 .zaha-brand .elev-sm { box-shadow: var(--shadow-sm); }
 .zaha-brand .elev-md { box-shadow: var(--shadow-md); }
@@ -227,7 +231,9 @@
 .zaha-brand .tag-accent { background: var(--color-accent-100); color: var(--color-accent-800); }
 .zaha-brand .tag-accent-2 { background: var(--color-accent-2-100); color: var(--color-accent-2-800); }
 .zaha-brand .tag-neutral { background: var(--color-neutral-100); color: var(--color-neutral-800); }
-.zaha-brand .tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent); }
+/* El borde puede ser --color-accent (3.03:1, alcanza el 3:1 de elemento no
+   textual), pero el TEXTO no: necesita 4.5:1 y va en el paso -700 (5.72:1). */
+.zaha-brand .tag-outline { border: 1px solid var(--color-accent); color: var(--color-accent-700); }
 
 /* — navigation — */
 .zaha-brand .nav {

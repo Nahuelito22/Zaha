@@ -1,5 +1,72 @@
 ---
 import '../styles/global.css'
+
+// SCRUM-35. Tres bloques que pide el ticket: producto, tecnología y créditos de
+// datos. El cuarto —el aviso de que esto no es un dispositivo médico— no está en
+// el ticket pero no es opcional: la página describe un sistema que calcula
+// puntajes clínicos, y publicarla sin decir que es un trabajo académico sería
+// dejar que se lea como otra cosa.
+//
+// Regla de contraste de esta página: --color-accent (#c67139) da 3.03:1 sobre el
+// fondo crema, así que NO se usa para texto en ningún lado; va solo como relleno
+// de superficies y bordes. Todo texto con color usa los pasos -700, que pasan AA
+// (medido con design_system/auditoria_contraste.py).
+
+const queHace = [
+  {
+    titulo: 'Calcula NEWS2 sin que nadie sume',
+    texto:
+      'El enfermero carga los siete parámetros al pie de la cama y el puntaje sale solo, con su nivel de riesgo. No hay tabla que consultar ni cuentas que hacer en la cabeza al final de una guardia de doce horas.',
+  },
+  {
+    titulo: 'Explica de dónde sale el número',
+    texto:
+      'Cada score se abre en el aporte de cada uno de los siete parámetros por separado. Es la diferencia entre mostrar un número y justificarlo, y es lo que lo vuelve un soporte a la decisión y no una calculadora.',
+  },
+  {
+    titulo: 'Ordena la sala por riesgo',
+    texto:
+      'El tablero se reordena solo a medida que entran mediciones nuevas, sin que nadie recargue nada. Dentro de un mismo nivel manda el puntaje: un 6 y un 5 son los dos «Medio», pero no piden lo mismo.',
+  },
+  {
+    titulo: 'Nunca borra un dato clínico',
+    texto:
+      'Una medición cargada no se sobrescribe. Si hay que corregirla se agrega una enmienda firmada, y la original queda visible con su score y su alerta. En salud, un dato previo borrado es un dato perdido.',
+  },
+  {
+    titulo: 'Funciona sin señal',
+    texto:
+      'Se instala en la tablet como una aplicación más y sigue tomando carga cuando el wifi del pasillo se cae. Lo pendiente se sincroniza solo al reconectar.',
+  },
+  {
+    titulo: 'Deja una traza que no se puede alterar',
+    texto:
+      'Cada alerta emitida y cada acuse quedan en un registro encadenado por hash: no se modifica ni se borra, y cualquier manipulación posterior es detectable.',
+  },
+]
+
+const decisiones = [
+  {
+    titulo: 'El puntaje se calcula en la base, no en la pantalla',
+    texto:
+      'Así el score de un paciente no depende del dispositivo desde el que se cargó la medición, y cualquier cliente que lea la base ve exactamente el mismo número.',
+  },
+  {
+    titulo: 'Dos capas de diseño que no se tocan',
+    texto:
+      'La identidad de marca es cálida, de tierra y terracota. La interfaz clínica es de neutros fríos, con el rojo, el ámbar y el verde reservados en exclusiva a los niveles de riesgo. Si el color de marca tiñe la pantalla de trabajo, lo neutro empieza a parecer alerta y la alerta real deja de destacar.',
+  },
+  {
+    titulo: 'El riesgo nunca se comunica solo con color',
+    texto:
+      'Cada nivel lleva color, texto y forma a la vez. Con el color apagado por completo, los cuatro niveles siguen siendo distinguibles.',
+  },
+  {
+    titulo: 'Registro clínico append-only',
+    texto:
+      'Ni la aplicación ni la base ofrecen una forma de pisar una medición: la restricción vive en el motor de datos, no en la buena conducta del código que lo usa.',
+  },
+]
 ---
 
 <html lang="es-AR">
@@ -7,7 +74,7 @@ import '../styles/global.css'
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,27 +84,249 @@ import '../styles/global.css'
 		/>
 		<meta
 			name="description"
-			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería."
+			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería de sala de internación. Proyecto académico."
 		/>
 		<title>Zaha — Soporte a la decisión clínica</title>
 	</head>
 	<!--
 		La capa de MARCA se activa acá, en el contenedor raíz. Todo lo que define
 		brand.css cuelga de esta clase; sin ella la página queda sin estilos.
-
-		Esto es un andamio, no la landing: SCRUM-35 escribe la página de verdad.
-		Lo que prueba es que la capa carga y aplica — tipografía Caprasimo sobre
-		fondo crema, botón terracota.
 	-->
 	<body class="zaha-brand">
-		<main style="max-width: 640px; margin: 0 auto; padding: 64px 24px;">
-			<h1>Zaha</h1>
-			<p>
-				Soporte a la decisión clínica. Calcula NEWS2 sobre los signos vitales
-				cargados al pie de la cama y avisa temprano cuando un paciente se
-				está deteriorando.
-			</p>
-			<a class="btn btn-primary" href="/app/">Entrar a la aplicación</a>
+		<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+		<header class="nav env">
+			<span class="nav-brand">Zaha</span>
+			<nav aria-label="Secciones">
+				<a href="#producto">Producto</a>
+				<a href="#tecnologia">Tecnología</a>
+				<a href="#datos">Datos</a>
+			</nav>
+		</header>
+
+		<main id="contenido">
+			<section class="env hero">
+				<p class="tag tag-outline">Proyecto académico · Prácticas Profesionalizantes 3</p>
+				<h1>El deterioro de un paciente avisa antes de ser una urgencia.</h1>
+				<p class="entrada">
+					Zaha es un sistema de soporte a la decisión clínica para enfermería de sala
+					de internación. Calcula la escala NEWS2 sobre los signos vitales cargados al
+					pie de la cama, ordena la sala por riesgo y avisa temprano, para que la
+					intervención llegue mientras todavía sirve.
+				</p>
+				<p>
+					<a class="btn btn-primary btn-touch" href="/app/">Entrar a la aplicación</a>
+				</p>
+			</section>
+
+			<section class="env" id="problema" aria-labelledby="h-problema">
+				<h2 id="h-problema">El problema</h2>
+				<p>
+					En una sala de internación los signos vitales se registran de a uno y en
+					papel. Nadie los cruza: el trabajo de notar que una frecuencia respiratoria
+					viene subiendo hace tres controles queda en la cabeza del enfermero, en
+					jornadas largas y con muchos pacientes a cargo.
+				</p>
+				<p>
+					Cuando ese cruce no ocurre, el deterioro se detecta tarde — y tarde, en un
+					shock séptico, es cuando la intervención preventiva ya no está disponible.
+					No es un problema de dedicación: es un problema de carga cognitiva, y por
+					eso se resuelve con una herramienta y no pidiendo más atención.
+				</p>
+			</section>
+
+			<section class="env" id="producto" aria-labelledby="h-producto">
+				<h2 id="h-producto">Qué hace</h2>
+				<ul class="grilla" role="list">
+					{queHace.map((f) => (
+						<li class="card">
+							<h3 class="card-title">{f.titulo}</h3>
+							<p class="card-body">{f.texto}</p>
+						</li>
+					))}
+				</ul>
+			</section>
+
+			<section class="env" id="tecnologia" aria-labelledby="h-tecnologia">
+				<h2 id="h-tecnologia">Cómo está construido</h2>
+
+				<p class="pila">
+					<span class="tag tag-neutral">React</span>
+					<span class="tag tag-neutral">TypeScript</span>
+					<span class="tag tag-neutral">Vite</span>
+					<span class="tag tag-neutral">PWA</span>
+					<span class="tag tag-neutral">Astro</span>
+					<span class="tag tag-neutral">PostgreSQL</span>
+					<span class="tag tag-neutral">Supabase</span>
+					<span class="tag tag-neutral">Python</span>
+					<span class="tag tag-neutral">pandas</span>
+				</p>
+
+				<p>
+					La aplicación clínica es una PWA instalable pensada para una tablet al pie
+					de la cama. El motor de NEWS2 y las reglas de integridad viven en la base de
+					datos, en PostgreSQL. La landing que estás leyendo es estática, en Astro.
+				</p>
+
+				<h3>Cuatro decisiones que explican el resto</h3>
+				<ul class="lista-decisiones" role="list">
+					{decisiones.map((d) => (
+						<li>
+							<h4>{d.titulo}</h4>
+							<p>{d.texto}</p>
+						</li>
+					))}
+				</ul>
+
+				<h3>Lo que todavía no está</h3>
+				<p>
+					El motor de aprendizaje automático —el que analiza la <em>tendencia</em> de
+					los signos vitales para anticipar un deterioro antes de que la escala lo
+					marque— está en desarrollo. Hoy funciona la tubería de datos y el cálculo
+					determinístico de NEWS2; el modelo predictivo y sus alertas explicables son
+					el trabajo que sigue. Se dice acá para que la página no prometa algo que el
+					sistema no hace todavía.
+				</p>
+			</section>
+
+			<section class="env" id="datos" aria-labelledby="h-datos">
+				<h2 id="h-datos">Datos y créditos</h2>
+
+				<h3>La escala</h3>
+				<p>
+					<strong>NEWS2</strong> (National Early Warning Score 2) es una escala
+					publicada por el Royal College of Physicians del Reino Unido. Zaha
+					implementa el cálculo determinístico según los rangos publicados; la escala
+					no es obra de este proyecto.
+				</p>
+
+				<h3>El conjunto de datos</h3>
+				<p>
+					El trabajo de modelado se apoya en <strong>MIMIC-IV-ED</strong>, una base
+					de episodios de guardia distribuida por PhysioNet. Se cita como exige su
+					licencia:
+				</p>
+				<blockquote class="cita">
+					Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Mark, R., &amp;
+					Horng, S. (2023). <em>MIMIC-IV-ED Demo</em> (version 2.2). PhysioNet.
+				</blockquote>
+				<p class="text-muted">
+					Distribuido bajo Open Database License (ODbL) v1.0, que obliga a atribuir la
+					fuente.
+				</p>
+
+				<h3>Los datos que se ven en la aplicación</h3>
+				<p>
+					<strong>Todos los pacientes que aparecen en Zaha son ficticios</strong>,
+					generados para desarrollo. Ningún dato de una persona real se usó para
+					construir ni para mostrar esta aplicación.
+				</p>
+			</section>
+
+			<section class="env" aria-labelledby="h-aviso">
+				<div class="aviso">
+					<h2 id="h-aviso">Esto no es un dispositivo médico</h2>
+					<p>
+						Zaha es un trabajo académico en desarrollo, no un producto aprobado para
+						uso asistencial. No está registrado ante ninguna autoridad regulatoria y
+						no debe utilizarse para tomar decisiones sobre pacientes reales.
+					</p>
+					<p>
+						Un sistema de soporte a la decisión clínica asiste al criterio
+						profesional; no lo reemplaza. Ningún puntaje sustituye la evaluación de
+						quien está al lado de la cama.
+					</p>
+				</div>
+			</section>
 		</main>
+
+		<footer class="env pie">
+			<p>
+				<strong>Zaha</strong> — Sistema de soporte a la decisión clínica.
+				Prácticas Profesionalizantes 3, 2026.
+			</p>
+		</footer>
+
+		<style>
+			/* Solo maquetación. Todo lo que es color, tipografía, espaciado y
+			   componentes sale de la capa de marca; acá no se redefine ninguno. */
+			.env {
+				max-width: 68ch;
+				margin-inline: auto;
+				padding-inline: var(--space-4);
+			}
+			section.env { padding-block: var(--space-8); }
+
+			.saltar {
+				position: absolute;
+				left: -9999px;
+			}
+			.saltar:focus {
+				position: static;
+				display: inline-block;
+				margin: var(--space-2);
+			}
+
+			header.nav {
+				justify-content: space-between;
+				max-width: 68ch;
+			}
+			header.nav nav {
+				display: flex;
+				gap: var(--space-4);
+				flex-wrap: wrap;
+			}
+
+			.hero { padding-block: var(--space-8); }
+			.hero h1 { margin-block: var(--space-3); }
+			.entrada { font-size: 1.15rem; }
+
+			/* auto-fit + minmax: en una tablet vertical cae a una columna sola sin
+			   necesidad de un breakpoint propio. */
+			.grilla {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+				gap: var(--space-3);
+				list-style: none;
+				padding: 0;
+			}
+
+			.pila {
+				display: flex;
+				flex-wrap: wrap;
+				gap: var(--space-2);
+			}
+
+			.lista-decisiones {
+				list-style: none;
+				padding: 0;
+				display: grid;
+				gap: var(--space-4);
+			}
+			.lista-decisiones h4 { margin-block-end: var(--space-1); }
+
+			.cita {
+				margin: var(--space-3) 0;
+				padding: var(--space-3);
+				/* El acento como BORDE, no como texto: #c67139 da 3.03:1 sobre el
+				   fondo y no alcanza para leer. */
+				border-inline-start: 3px solid var(--color-accent);
+				background: var(--color-surface);
+				border-radius: var(--radius-md);
+			}
+
+			.aviso {
+				padding: var(--space-4);
+				border: 2px solid var(--color-accent-700);
+				border-radius: var(--radius-md);
+				background: var(--color-accent-100);
+			}
+			.aviso h2 { margin-block-start: 0; }
+
+			.pie {
+				padding-block: var(--space-6);
+				border-block-start: 1px solid var(--color-divider);
+			}
+		</style>
 	</body>
 </html>
