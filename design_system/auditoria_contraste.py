@@ -1,4 +1,5 @@
-# Auditoria WCAG 2.1 de la capa clinica de Zaha (SCRUM-45).
+# Auditoria WCAG 2.1 de las DOS capas del sistema de diseno de Zaha.
+# Capa clinica (SCRUM-45) y capa de marca (SCRUM-35). Correr: python design_system/auditoria_contraste.py
 def lum(h):
     h = h.lstrip("#")
     c = [int(h[i:i+2], 16) / 255 for i in (0, 2, 4)]
@@ -47,24 +48,74 @@ pruebas = [
     ("accion azul s/ su tinte",              "#1f5fb8", "#e8f0fb", 4.5, "texto"),
     ("foco (outline) s/ blanco",             "#1f5fb8", BG, 3.0, "no-texto"),
     ("prediccion IA s/ su fondo",            "#5b3d9e", "#f0ebfa", 4.5, "texto"),
-    ("borde neutro s/ blanco",               "#d6dae1", BG, 3.0, "no-texto"),
+    # NO es falla: --c-border solo separa (borde de .panel, linea entre filas de
+    # tabla). WCAG 1.4.11 exige 3:1 a lo que delimita un COMPONENTE, no a un
+    # divisor decorativo. Se deja medido, con umbral 0, para que el numero este a
+    # la vista y una falla de verdad no se pierda entre ruido. Ver SCRUM-45.
+    ("borde neutro s/ blanco [divisor decorativo]", "#d6dae1", BG, 0.0, "decorativo"),
     ("borde neutro fuerte s/ blanco",        "#7b8798", BG, 3.0, "no-texto"),
 ]
 
-fallos = []
-print(f"{'':52} {'ratio':>7}  {'min':>4}  estado")
-print("-" * 78)
-for etq, fg, bg, minimo, tipo in pruebas:
-    r = ratio(fg, bg)
-    ok = r >= minimo
-    if not ok:
-        fallos.append((etq, fg, bg, r, minimo, tipo))
-    print(f"{etq:52} {r:7.2f}  {minimo:4.1f}  {'OK' if ok else 'FALLA'}")
+# ── Capa de MARCA (brand.css) ────────────────────────────────────────────────
+# Se suma en SCRUM-35. La landing y el login son territorio de marca, y la paleta
+# tierra es clara: varios de sus colores NO sirven para texto aunque sí sirvan
+# para bordes y rellenos. Esa distinción es la que se verifica acá.
+B_BG, B_SURF = "#f5ead8", "#ebddc5"
 
-print()
-if fallos:
-    print(f"{len(fallos)} FALLA(S):")
-    for etq, fg, bg, r, m, tipo in fallos:
-        print(f"  - {etq}: {fg} sobre {bg} = {r:.2f}:1, necesita {m}:1 ({tipo})")
-else:
-    print("Sin fallas.")
+
+def mezcla(fg, bg, pct):
+    """Resuelve color-mix(in srgb, fg pct%, transparent) compuesto sobre bg.
+    brand.css define sus grises atenuados así, y hay que evaluarlos ya
+    compuestos: sin esto se mide el color opaco, que no es el que se ve."""
+    f = [int(fg.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    b = [int(bg.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)]
+    a = pct / 100
+    return "#%02x%02x%02x" % tuple(round(f[i] * a + b[i] * (1 - a)) for i in range(3))
+
+
+TEXTO_MARCA = "#201e1d"
+
+pruebas_marca = [
+    ("marca: texto s/ fondo",              TEXTO_MARCA, B_BG, 4.5, "texto"),
+    ("marca: texto s/ superficie",         TEXTO_MARCA, B_SURF, 4.5, "texto"),
+    (".text-muted (65%) s/ fondo",         mezcla(TEXTO_MARCA, B_BG, 65), B_BG, 4.5, "texto"),
+    (".card-body (80%) s/ superficie",     mezcla(TEXTO_MARCA, B_SURF, 80), B_SURF, 4.5, "texto"),
+    (".card-meta (65%) s/ superficie",     mezcla(TEXTO_MARCA, B_SURF, 65), B_SURF, 4.5, "texto"),
+    (".tag-neutral: n-800 s/ n-100",       "#474238", "#f9f4ed", 4.5, "texto"),
+    (".tag-outline: texto acento-700",     "#8c491a", B_BG, 4.5, "texto"),
+    (".tag-outline: borde acento",         "#c67139", B_BG, 3.0, "no-texto"),
+    ("outline de foco s/ fondo",           "#c67139", B_BG, 3.0, "no-texto"),
+    # Los dos de abajo NO son fallas: se listan como recordatorio de que estos
+    # colores son de relleno y borde, y que usarlos para texto rompe AA.
+    ("acento terracota (solo relleno)",    "#c67139", B_BG, 3.0, "no-texto"),
+    ("oliva (solo relleno)",               "#7a8a5e", B_BG, 3.0, "no-texto"),
+]
+
+pruebas = pruebas + pruebas_marca
+
+
+def auditar(casos=pruebas):
+    """Devuelve la lista de fallas. Se importa desde otros chequeos (la landing
+    usa `ratio` para verificar la paleta de marca), así que la corrida va bajo
+    __main__: importar el módulo no tiene que imprimir nada."""
+    fallos = []
+    print(f"{'':52} {'ratio':>7}  {'min':>4}  estado")
+    print("-" * 78)
+    for etq, fg, bg, minimo, tipo in casos:
+        r = ratio(fg, bg)
+        ok = r >= minimo
+        if not ok:
+            fallos.append((etq, fg, bg, r, minimo, tipo))
+        print(f"{etq:52} {r:7.2f}  {minimo:4.1f}  {'OK' if ok else 'FALLA'}")
+    print()
+    if fallos:
+        print(f"{len(fallos)} FALLA(S):")
+        for etq, fg, bg, r, m, tipo in fallos:
+            print(f"  - {etq}: {fg} sobre {bg} = {r:.2f}:1, necesita {m}:1 ({tipo})")
+    else:
+        print("Sin fallas.")
+    return fallos
+
+
+if __name__ == "__main__":
+    auditar()

@@ -1,5 +1,50 @@
 ---
 import '../styles/global.css'
+
+// SCRUM-35. Dirección visual elegida con Nahuel sobre un lienzo de tres bocetos:
+// bloque terracota lleno arriba, el tablero real montado encima, cuatro cajas y
+// un cierre en franja de superficie.
+//
+// Dos reglas que gobiernan este archivo:
+//
+// 1. CONTRASTE. --color-accent (#c67139) da 3.03:1 sobre el fondo crema: sirve
+//    de relleno y de borde, NUNCA de texto. Todo texto con color usa el paso
+//    -700. Medido con design_system/auditoria_contraste.py.
+//
+// 2. EL TABLERO NO MIENTE. Debajo de 1024px la sala se muestra como LISTA, que
+//    es lo que la app hace de verdad en ese ancho (--breakpoint-ancho). Una
+//    tabla encogida en la landing prometería una pantalla que no existe.
+
+const camas = [
+  { cama: 'CM-07', paciente: 'Páez, Ramón Osvaldo',   toma: 'hace 14 d', score: 18, nivel: 'Alto',       clase: 'alto' },
+  { cama: 'CM-01', paciente: 'Quiroga, Rosa Beatriz', toma: 'hace 2 d',  score: 16, nivel: 'Alto',       clase: 'alto' },
+  { cama: 'CM-05', paciente: 'Ojeda, Nélida Carmen',  toma: 'hace 14 d', score: 6,  nivel: 'Medio',      clase: 'medio' },
+  { cama: 'CM-03', paciente: 'Funes, Héctor Alfredo', toma: 'hace 14 d', score: 3,  nivel: 'Medio Bajo', clase: 'mediobajo' },
+  { cama: 'CM-09', paciente: 'Vergara, Marta Susana', toma: 'hace 14 d', score: 0,  nivel: 'Bajo',       clase: 'bajo' },
+]
+
+const capacidades = [
+  {
+    titulo: 'NEWS2 automático',
+    texto: 'Siete parámetros, un puntaje, sin cuentas a mano.',
+    icono: '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  },
+  {
+    titulo: 'Explica el número',
+    texto: 'El aporte de cada parámetro, por separado.',
+    icono: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"/><circle cx="12" cy="12" r="2.5"/>',
+  },
+  {
+    titulo: 'Sin señal',
+    texto: 'Sigue tomando carga y sincroniza al volver.',
+    icono: '<rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/><path d="M3 3l18 18"/>',
+  },
+  {
+    titulo: 'Antigüedad a la vista',
+    texto: 'Cada fila dice hace cuánto se tomó ese dato.',
+    icono: '<path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/>',
+  },
+]
 ---
 
 <html lang="es-AR">
@@ -7,7 +52,7 @@ import '../styles/global.css'
 		<meta charset="utf-8" />
 		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,27 +62,421 @@ import '../styles/global.css'
 		/>
 		<meta
 			name="description"
-			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería."
+			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería de sala de internación. Proyecto académico."
 		/>
 		<title>Zaha — Soporte a la decisión clínica</title>
 	</head>
-	<!--
-		La capa de MARCA se activa acá, en el contenedor raíz. Todo lo que define
-		brand.css cuelga de esta clase; sin ella la página queda sin estilos.
-
-		Esto es un andamio, no la landing: SCRUM-35 escribe la página de verdad.
-		Lo que prueba es que la capa carga y aplica — tipografía Caprasimo sobre
-		fondo crema, botón terracota.
-	-->
 	<body class="zaha-brand">
-		<main style="max-width: 640px; margin: 0 auto; padding: 64px 24px;">
-			<h1>Zaha</h1>
-			<p>
-				Soporte a la decisión clínica. Calcula NEWS2 sobre los signos vitales
-				cargados al pie de la cama y avisa temprano cuando un paciente se
-				está deteriorando.
-			</p>
-			<a class="btn btn-primary" href="/app/">Entrar a la aplicación</a>
+		<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+		<!-- ── Bloque de marca: nav + promesa ───────────────────────────── -->
+		<div class="bloque">
+			<div class="env">
+				<header class="barra">
+					<span class="marca">Zaha</span>
+					<nav aria-label="Secciones">
+						<a href="#producto">Producto</a>
+						<a href="#tecnologia">Tecnología</a>
+						<a href="#datos">Datos</a>
+						<a class="entrar" href="/app/">Entrar</a>
+					</nav>
+				</header>
+
+				<div class="hero">
+					<span class="kicker">Soporte a la decisión clínica</span>
+					<h1>El deterioro avisa antes de ser una urgencia.</h1>
+					<p class="entrada">
+						Zaha calcula NEWS2 sobre los signos vitales cargados al pie de la cama y
+						ordena la sala por riesgo, para que la intervención llegue mientras
+						todavía sirve.
+					</p>
+					<div class="acciones">
+						<a class="cta" href="/app/">Entrar a la aplicación</a>
+						<a class="cta cta-fantasma" href="#producto">Ver cómo funciona</a>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<main id="contenido">
+			<!-- ── El producto, montado sobre el bloque ──────────────────── -->
+			<section class="env" id="producto" aria-labelledby="h-producto">
+				<h2 id="h-producto" class="oculto-visual">El tablero de triage</h2>
+
+				<div class="tablero">
+					<div class="tablero-cab">
+						<span>Clínica Médica · 8 camas ocupadas · ordenadas por riesgo</span>
+						<span class="vivo">
+							<svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true"><circle cx="4" cy="4" r="4" fill="#1f7a44"/></svg>
+							actualización en vivo
+						</span>
+					</div>
+
+					<div class="fila fila-titulos" aria-hidden="true">
+						<span>Cama</span><span>Paciente</span><span>Última toma</span>
+						<span class="der">NEWS2</span><span class="der">Nivel</span>
+					</div>
+
+					{camas.map((c) => (
+						<div class={`fila r-${c.clase}`}>
+							<span class="celda-cama"><span class="barra-riesgo"></span>{c.cama}</span>
+							{/* display:contents en ancho: `paciente` y `toma` se vuelven celdas de
+							    la grilla. En angosto es una columna y quedan apiladas. */}
+							<span class="info">
+								<span class="paciente">{c.paciente}</span>
+								<span class="toma">{c.toma}</span>
+							</span>
+							<span class="score">{c.score}</span>
+							<span class="celda-nivel">
+								<span class="chip">
+									<span class="glifo"></span>{c.nivel}
+								</span>
+							</span>
+						</div>
+					))}
+				</div>
+
+				<p class="pie-figura">Pacientes ficticios, generados para desarrollo.</p>
+			</section>
+
+			<!-- ── Cuatro capacidades ────────────────────────────────────── -->
+			<section class="env" aria-labelledby="h-capacidades">
+				<h2 id="h-capacidades" class="oculto-visual">Qué hace</h2>
+				<ul class="cajas" role="list">
+					{capacidades.map((c) => (
+						<li class="caja">
+							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={c.icono} />
+							<h3>{c.titulo}</h3>
+							<p>{c.texto}</p>
+						</li>
+					))}
+				</ul>
+			</section>
+
+			<!-- ── Cierre append-only ────────────────────────────────────── -->
+			<section class="env" aria-labelledby="h-append">
+				<div class="franja">
+					<div>
+						<h2 id="h-append">Un dato clínico no se borra</h2>
+						<p>
+							Una medición cargada no se sobrescribe nunca: se enmienda, y la
+							original queda visible con su score y su alerta.
+						</p>
+					</div>
+					<svg class="escudo" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#56633f" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+						<path d="M12 3l7 3v6c0 4-3 7-7 8-4-1-7-4-7-8V6z"/><path d="M9 12l2 2 4-4"/>
+					</svg>
+				</div>
+			</section>
+
+			<!-- ── Tecnología ───────────────────────────────────────────── -->
+			<section class="env angosta" id="tecnologia" aria-labelledby="h-tecnologia">
+				<h2 id="h-tecnologia">Cómo está construido</h2>
+				<p class="pila">
+					<span class="tag tag-neutral">React</span>
+					<span class="tag tag-neutral">TypeScript</span>
+					<span class="tag tag-neutral">Vite</span>
+					<span class="tag tag-neutral">PWA</span>
+					<span class="tag tag-neutral">Astro</span>
+					<span class="tag tag-neutral">PostgreSQL</span>
+					<span class="tag tag-neutral">Supabase</span>
+					<span class="tag tag-neutral">Python</span>
+				</p>
+				<p>
+					El motor de NEWS2 y las reglas de integridad viven en la base de datos, no
+					en la pantalla: el puntaje de un paciente no depende del dispositivo desde
+					el que se cargó la medición.
+				</p>
+				<p>
+					<strong>Lo que todavía no está:</strong> el motor de aprendizaje automático
+					que analiza la tendencia para anticipar un deterioro antes de que la escala
+					lo marque. Hoy funciona la tubería de datos y el cálculo determinístico.
+				</p>
+			</section>
+
+			<!-- ── Datos y créditos ─────────────────────────────────────── -->
+			<section class="env angosta" id="datos" aria-labelledby="h-datos">
+				<h2 id="h-datos">Datos y créditos</h2>
+				<p>
+					<strong>NEWS2</strong> es una escala publicada por el Royal College of
+					Physicians del Reino Unido. Zaha implementa su cálculo; la escala no es obra
+					de este proyecto.
+				</p>
+				<p>El trabajo de modelado se apoya en <strong>MIMIC-IV-ED</strong>, que se cita como exige su licencia:</p>
+				<blockquote class="cita">
+					Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Mark, R., &amp;
+					Horng, S. (2023). <em>MIMIC-IV-ED Demo</em> (version 2.2). PhysioNet.
+				</blockquote>
+				<p class="text-muted">
+					Distribuido bajo Open Database License (ODbL) v1.0, que obliga a atribuir la
+					fuente.
+				</p>
+			</section>
+
+			<section class="env angosta" aria-labelledby="h-aviso">
+				<div class="aviso">
+					<h2 id="h-aviso">Esto no es un dispositivo médico</h2>
+					<p>
+						Zaha es un trabajo académico en desarrollo. No está registrado ante
+						ninguna autoridad regulatoria y no debe usarse para tomar decisiones
+						sobre pacientes reales. Un soporte a la decisión asiste al criterio
+						profesional; no lo reemplaza.
+					</p>
+				</div>
+			</section>
 		</main>
+
+		<footer class="env pie">
+			<p>
+				<strong>Zaha</strong> — Sistema de soporte a la decisión clínica.
+				Prácticas Profesionalizantes 3, 2026.
+			</p>
+		</footer>
+
+		<style>
+			/* ═══ Envolturas ═══════════════════════════════════════════════
+			   68ch encajonaba el contenido en un monitor y dejaba la página
+			   flaca. El ancho general ahora es 1264px; `angosta` recupera la
+			   medida de lectura solo donde hay párrafos seguidos. */
+			.env {
+				max-width: 1264px;
+				margin-inline: auto;
+				padding-inline: clamp(var(--space-4), 4vw, 88px);
+			}
+			.env.angosta > * { max-width: 68ch; }
+			section.env { padding-block: var(--space-8); }
+
+			.saltar { position: absolute; left: -9999px; }
+			.saltar:focus { position: static; display: inline-block; margin: var(--space-2); }
+
+			.oculto-visual {
+				position: absolute; width: 1px; height: 1px;
+				overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+			}
+
+			/* ═══ Bloque de marca ═══════════════════════════════════════════
+			   El padding inferior es grande a propósito: ahí se monta el
+			   tablero con un margen negativo. */
+			.bloque {
+				background: var(--color-accent-700);
+				color: var(--color-bg);
+				border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+				padding-block: var(--space-4) calc(var(--space-8) * 4.3);
+			}
+			.barra {
+				display: flex; align-items: center; justify-content: space-between;
+				flex-wrap: wrap; gap: var(--space-3);
+				padding-block-end: var(--space-8);
+			}
+			.marca { font-family: var(--font-heading); font-size: 22px; }
+			.barra nav { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
+			.barra nav a { color: var(--color-accent-200); font-size: 15px; }
+			.barra nav a:hover { color: var(--color-bg); }
+			.barra nav a.entrar {
+				background: var(--color-bg); color: var(--color-accent-700);
+				font-family: var(--font-heading); font-size: 14px;
+				padding: 9px 17px; border-radius: var(--radius-md);
+			}
+
+			.hero {
+				display: flex; flex-direction: column; align-items: center;
+				text-align: center; gap: var(--space-4);
+			}
+			.hero h1 {
+				font-size: clamp(38px, 5.2vw, 72px);
+				max-width: 17ch; text-wrap: balance; line-height: 1.08;
+				margin: 0;
+			}
+			.kicker {
+				border: 1px solid var(--color-accent-400);
+				color: var(--color-accent-200);
+				font-size: 12px; letter-spacing: 0.02em;
+				padding: 4px 13px; border-radius: 12px;
+			}
+			.entrada {
+				font-size: clamp(16px, 1.4vw, 19px); line-height: 1.55;
+				max-width: 54ch; color: var(--color-accent-200);
+			}
+			.acciones { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); margin-block-start: var(--space-1); }
+			.cta {
+				background: var(--color-bg); color: var(--color-accent-700);
+				font-family: var(--font-heading); font-size: 16px;
+				padding: 14px 30px; border-radius: var(--radius-md);
+				/* 46px de alto: por encima del piso táctil de 44px */
+			}
+			.cta-fantasma {
+				background: transparent; color: var(--color-bg);
+				border: 1px solid var(--color-accent-400);
+			}
+
+			/* ═══ Tablero ═══════════════════════════════════════════════════
+			   Neutros fríos: es la pantalla clínica, no territorio de marca. */
+			#producto { padding-block-start: 0; }
+			.tablero {
+				margin-block-start: calc(var(--space-8) * -3);
+				background: #ffffff;
+				border-radius: var(--radius-md);
+				box-shadow: var(--shadow-lg);
+				padding: var(--space-4) var(--space-6);
+				color: #14171c;
+			}
+			.tablero-cab {
+				display: flex; flex-wrap: wrap; gap: var(--space-2);
+				justify-content: space-between; align-items: center;
+				padding-block-end: var(--space-3);
+				border-block-end: 1px solid #d6dae1;
+				font-size: 15px; font-weight: 700;
+			}
+			.vivo { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 400; color: #5a636f; }
+
+			.fila {
+				display: grid;
+				grid-template-columns: auto 1fr auto auto;
+				align-items: center;
+				gap: var(--space-2);
+				padding-block: var(--space-3);
+				border-block-end: 1px solid #d6dae1;
+			}
+			.fila:last-child { border-block-end: none; }
+			.fila-titulos { display: none; }
+
+			.celda-cama { display: flex; align-items: center; gap: 11px; font-size: 14px; font-weight: 700; }
+			.barra-riesgo { width: 3px; height: 34px; border-radius: 2px; flex: none; }
+			.info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+			.paciente { font-size: 14px; }
+			.toma { font-size: 12px; color: #5a636f; }
+			.score { font-size: 19px; font-weight: 700; text-align: right; }
+
+			.chip {
+				display: inline-flex; align-items: center; gap: 7px;
+				font-size: 12px; font-weight: 600;
+				padding: 4px 10px; border-radius: 4px; border: 1px solid;
+				white-space: nowrap;
+			}
+			.glifo { width: 10px; height: 10px; flex: none; background: currentColor; }
+
+			/* Los cuatro niveles, con los MISMOS valores que clinical.css.
+			   El glifo cambia de forma además de color: el nivel nunca viaja
+			   solo en el canal cromático. */
+			.r-bajo      .barra-riesgo { background: #1f7a44; }
+			.r-bajo      .chip { color: #1f7a44; background: #e6f4ec; border-color: #1f7a44; }
+			.r-bajo      .glifo { border-radius: 50%; background: transparent; box-shadow: inset 0 0 0 2px currentColor; }
+
+			.r-mediobajo .barra-riesgo { background: #b08c00; }
+			.r-mediobajo .chip { color: #8a6d00; background: #fdf5d9; border-color: #b08c00; }
+			.r-mediobajo .glifo { clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+
+			.r-medio     .barra-riesgo { background: #d1600f; }
+			.r-medio     .chip { color: #a4480a; background: #fdeee0; border-color: #d1600f; }
+			.r-medio     .glifo { clip-path: polygon(50% 0, 100% 100%, 0 100%); position: relative; }
+			.r-medio     .glifo::after {
+				content: ""; position: absolute; inset: 3px 2px 1px;
+				background: #fdeee0; clip-path: polygon(50% 0, 100% 100%, 0 100%);
+			}
+
+			.r-alto      .barra-riesgo { background: #c8182a; }
+			.r-alto      .chip { color: #a71322; background: #fdeaec; border-color: #c8182a; border-width: 2px; }
+			.r-alto      .glifo { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+
+			.pie-figura { font-size: 13px; color: var(--color-neutral-700); padding-block-start: var(--space-3); }
+
+			/* ═══ Cajas ═════════════════════════════════════════════════════ */
+			/* Columnas explícitas y no `auto-fit`: las cajas son EXACTAMENTE
+			   cuatro, y auto-fit abría una quinta pista a partir de 1280px.
+			   2×2 en teléfono y tablet, una fila de cuatro en escritorio. */
+			.cajas {
+				display: grid; gap: var(--space-4);
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+				list-style: none; padding: 0; margin: 0;
+			}
+			.caja {
+				background: var(--color-surface);
+				border-radius: var(--radius-md);
+				padding: var(--space-6);
+				display: flex; flex-direction: column; gap: var(--space-2);
+				color: var(--color-accent-700);
+			}
+			.caja h3 { font-size: 19px; margin: 0; color: var(--color-text); }
+			.caja p { font-size: 15px; line-height: 1.5; color: #4a443c; margin: 0; }
+
+			/* ═══ Franja de cierre ══════════════════════════════════════════ */
+			.franja {
+				background: var(--color-surface);
+				border-radius: var(--radius-lg);
+				padding: var(--space-8) calc(var(--space-8) * 1.5);
+				display: flex; align-items: center; justify-content: space-between;
+				gap: var(--space-8); flex-wrap: wrap;
+			}
+			.franja h2 { font-size: clamp(24px, 2.4vw, 30px); margin: 0 0 var(--space-2); }
+			.franja p { font-size: 16px; line-height: 1.55; color: #4a443c; max-width: 58ch; }
+			.escudo { flex: none; }
+
+			/* ═══ Texto largo ═══════════════════════════════════════════════ */
+			.angosta h2 { margin-block-end: var(--space-4); }
+			.angosta p { margin-block-end: var(--space-3); line-height: 1.6; }
+			.pila { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+			.cita {
+				margin: var(--space-3) 0;
+				padding: var(--space-3);
+				/* El acento como BORDE, no como texto: 3.03:1 no alcanza para leer. */
+				border-inline-start: 3px solid var(--color-accent);
+				background: var(--color-surface);
+				border-radius: var(--radius-md);
+			}
+
+			.aviso {
+				padding: var(--space-6);
+				border: 2px solid var(--color-accent-700);
+				border-radius: var(--radius-md);
+				background: var(--color-accent-100);
+			}
+			.aviso h2 { margin-block-start: 0; font-size: 25px; }
+			.aviso p { margin: 0; }
+
+			.pie {
+				padding-block: var(--space-6) var(--space-8);
+				border-block-start: 1px solid var(--color-divider);
+				font-size: 14px;
+			}
+
+			/* ═══ Ancho ═════════════════════════════════════════════════════
+			   1024px es el MISMO umbral que --breakpoint-ancho de la app: es
+			   el ancho de una tablet acostada. Recién ahí la sala se ve como
+			   tabla; debajo es lista, igual que en la aplicación real. */
+			@media (min-width: 1024px) {
+				.fila {
+					grid-template-columns: 92px 1fr 96px 74px 148px;
+					gap: 0;
+				}
+				/* La envoltura desaparece como caja y sus dos hijos pasan a ser
+				   celdas de la grilla: una sola marcación sirve para los dos
+				   formatos, sin duplicar el contenido ni ocultar nada. */
+				.info { display: contents; }
+				.toma { font-size: 13px; }
+				.fila-titulos {
+					display: grid;
+					font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+					color: #5a636f; font-weight: 400;
+					padding-block: var(--space-3) var(--space-2);
+					border-block-end: 2px solid #7b8798;
+				}
+				.der { text-align: right; }
+				.celda-nivel { text-align: right; }
+				.chip { font-size: 13px; padding: 4px 11px; }
+				.glifo { width: 11px; height: 11px; }
+				.cajas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+			}
+
+			@media (max-width: 1023px) {
+				.escudo { width: 44px; height: 44px; }
+			}
+
+			/* Por debajo de 360px dos columnas dejan la tarjeta en ~140px y el
+			   título parte en cuatro renglones. Una sola columna. */
+			@media (max-width: 359px) {
+				.cajas { grid-template-columns: 1fr; }
+			}
+		</style>
 	</body>
 </html>
