@@ -27,28 +27,25 @@ from pathlib import Path
 import pandas as pd
 
 from . import news2
+from ..validation import esquemas
 
 # Los 5 parámetros que MIMIC-IV-ED sí tiene. Los otros 2 se imputan (ADR-007).
 PARAMETROS_PRESENTES = ["resprate", "o2sat", "temperature", "sbp", "heartrate"]
 
 # Rangos de plausibilidad fisiológica.
 #
-# Son los MISMOS que los CHECK de la base (migración 20260521000000) y que `RANGOS` en
-# `app/clinical/src/lib/tipos.ts`. Tienen que ser los mismos: si la base rechaza una
-# SpO2 de 10 % pero la tubería la acepta, el NEWS2 histórico y el de producción se
-# calculan sobre universos distintos y la comparativa de tasa de alertas (SCRUM-58) deja
-# de significar algo.
+# Definidos en `validation/esquemas.py`, que es la fuente única. Se reexportan acá
+# porque este módulo los usa para anular valores imposibles, y porque el nombre ya
+# estaba publicado. Tienen que seguir siendo los mismos que los CHECK de la base
+# (migración 20260521000000) y que `RANGOS` en `app/clinical/src/lib/tipos.ts`: si la
+# base rechaza una SpO2 de 10 % pero la tubería la acepta, el NEWS2 histórico y el de
+# producción se calculan sobre universos distintos y la comparativa de tasa de alertas
+# (SCRUM-58) deja de significar algo.
 #
 # En el demo hay exactamente 2 filas fuera de rango: una SpO2 de 10 % y una sistólica de
 # 11 mmHg. No son pacientes, son errores de registro — y las dos sumaban 3 puntos de
 # NEWS2 cada una. A escala de la base completa van a ser cientos.
-RANGOS_PLAUSIBLES = {
-    "frecuencia_respiratoria": (0, 80),
-    "spo2": (50, 100),
-    "temperatura": (25, 45),
-    "presion_sistolica": (30, 300),
-    "frecuencia_cardiaca": (0, 300),
-}
+RANGOS_PLAUSIBLES = esquemas.RANGOS_PLAUSIBLES
 
 # El desenlace. `disposition` es lo que pasó al terminar el episodio de guardia.
 # ADMITTED (internación) es el proxy de deterioro; EXPIRED no aparece en el demo pero
@@ -187,9 +184,22 @@ def normalizar_episodios(edstays: pd.DataFrame) -> pd.DataFrame:
 
 
 def construir(raiz_datos: Path, destino: Path) -> Resumen:
+    """
+    Corre la tubería completa, validando el esquema en CADA paso (SCRUM-52).
+
+    Se valida a la entrada y a la salida, no solo al final: si el CSV crudo ya viene
+    con una columna que cambió de nombre, el error tiene que decir eso y no aparecer
+    doscientas líneas después como un tipo raro en el parquet.
+    """
     edstays, vitalsign = cargar(raiz_datos)
+    esquemas.validar(esquemas.VITALSIGN_CRUDO, vitalsign, "lectura de vitalsign")
+    esquemas.validar(esquemas.EDSTAYS_CRUDO, edstays, "lectura de edstays")
+
     observaciones = normalizar_observaciones(vitalsign)
     episodios = normalizar_episodios(edstays)
+
+    esquemas.validar(esquemas.OBSERVACIONES, observaciones, "observaciones normalizadas")
+    esquemas.validar(esquemas.EPISODIOS, episodios, "episodios normalizados")
 
     destino.mkdir(parents=True, exist_ok=True)
     observaciones.to_parquet(destino / "observaciones.parquet", index=False)
