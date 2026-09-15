@@ -154,9 +154,15 @@ OBSERVACIONES = pa.DataFrameSchema(
         "news2_riesgo": pa.Column(
             object, checks=pa.Check.isin(NIVELES_RIESGO), nullable=True
         ),
-        "news2_rojo_aislado": pa.Column(object, nullable=True),
-        "news2_imputado": pa.Column(object, nullable=True),
-        "news2_puntos_imputados": pa.Column(object, nullable=True),
+        # Estas tres van SIN dtype a propósito: en memoria son `object` (enteros y
+        # booleanos mezclados con el nulo de las tomas no puntuables), pero al volver
+        # del parquet pyarrow las devuelve como float64. Fijar el tipo haría que el
+        # mismo dato fallara según por dónde entró, que es exactamente el tipo de
+        # falsa alarma que vuelve inútil a un esquema. Lo que sí importa —el score, el
+        # nivel de riesgo y `puntuable`— sigue tipado arriba.
+        "news2_rojo_aislado": pa.Column(nullable=True),
+        "news2_imputado": pa.Column(nullable=True),
+        "news2_puntos_imputados": pa.Column(nullable=True),
     },
     checks=[SCORE_SII_PUNTUABLE],
     strict=False,  # las columnas sub_* se agregan dinámicamente desde news2.calcular
@@ -182,6 +188,50 @@ EPISODIOS = pa.DataFrameSchema(
     strict=False,
     name="episodios",
 )
+
+
+# =============================================================================
+# La tabla etiquetada (SCRUM-53). Es `OBSERVACIONES` más las tres columnas de la
+# etiqueta v2, y se construye a partir de aquélla para que no puedan divergir.
+# =============================================================================
+def _y_nula_sii_descartada(df: pd.DataFrame) -> bool:
+    """
+    La etiqueta falta exactamente en las filas descartadas, y en ninguna otra.
+
+    Descartada es ventana ciega o dato posterior al egreso. Si esto falla, o se coló una
+    fila sin etiquetar en el conjunto de entrenamiento, o se etiquetó una toma de la
+    última hora antes del evento — que es justo la que hay que descartar para que el
+    modelo no aprenda a confirmar lo obvio.
+    """
+    descartada = df["en_ventana_ciega"] | df["posterior_al_evento"]
+    return bool((df["y"].isna() == descartada).all())
+
+
+Y_NULA_SII_DESCARTADA = pa.Check(
+    _y_nula_sii_descartada,
+    name="y_nula_sii_descartada",
+    error="la etiqueta y los motivos de descarte no se corresponden",
+)
+
+OBSERVACIONES_ETIQUETADAS = OBSERVACIONES.add_columns(
+    {
+        "horas_al_evento": pa.Column(
+            float,
+            nullable=True,
+            description="horas entre la toma y el desenlace adverso; nulo si no hubo",
+        ),
+        "posterior_al_evento": pa.Column(bool, nullable=False),
+        "en_ventana_ciega": pa.Column(bool, nullable=False),
+        "y": pa.Column(
+            "Int64",
+            checks=pa.Check.isin([0, 1]),
+            nullable=True,
+            description="etiqueta v2; nula en las filas de ventana ciega",
+        ),
+    }
+)
+OBSERVACIONES_ETIQUETADAS.checks = [SCORE_SII_PUNTUABLE, Y_NULA_SII_DESCARTADA]
+OBSERVACIONES_ETIQUETADAS.name = "observaciones etiquetadas"
 
 
 # =============================================================================
