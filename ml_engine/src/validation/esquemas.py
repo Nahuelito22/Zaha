@@ -234,6 +234,26 @@ OBSERVACIONES_ETIQUETADAS.checks = [SCORE_SII_PUNTUABLE, Y_NULA_SII_DESCARTADA]
 OBSERVACIONES_ETIQUETADAS.name = "observaciones etiquetadas"
 
 
+# La misma tabla ya repartida en train/validación/prueba (SCRUM-54).
+#
+# El contrato NO puede expresar el invariante que importa —que un paciente no cruce
+# particiones—, porque es una propiedad del conjunto y no de la fila. Eso lo verifica
+# `particiones.auditar()`. Acá sólo se asegura que la columna exista y que no tenga
+# valores inventados: una partición mal escrita mandaría filas a ninguna parte.
+OBSERVACIONES_PARTICIONADAS = OBSERVACIONES_ETIQUETADAS.add_columns(
+    {
+        "particion": pa.Column(
+            str,
+            checks=pa.Check.isin(["entrenamiento", "validacion", "prueba"]),
+            nullable=False,
+            description="partición del experimento; se decide por paciente, nunca por fila",
+        ),
+    }
+)
+OBSERVACIONES_PARTICIONADAS.checks = [SCORE_SII_PUNTUABLE, Y_NULA_SII_DESCARTADA]
+OBSERVACIONES_PARTICIONADAS.name = "observaciones particionadas"
+
+
 # =============================================================================
 # El contrato de UNA toma. Es lo que va a recibir la API de inferencia por JSON.
 # =============================================================================
