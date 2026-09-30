@@ -191,6 +191,65 @@ def test_el_intervalo_de_reduccion_cubre_el_valor_puntual():
         assert lo <= puntual <= hi, f"el puntual {puntual} cae fuera de [{lo}, {hi}]"
 
 
+
+def test_la_version_rapida_coincide_con_la_que_usa_la_curva():
+    """
+    `tasa_alertas_a_sensibilidad` existe solo por velocidad: el bootstrap la llama miles de
+    veces. Si divergiera de `tasa_para_sensibilidad`, el numero publicado saldria de una
+    implementacion distinta de la que se puede auditar leyendo la curva.
+    """
+    rng = np.random.default_rng(0)
+    for _ in range(200):
+        n = int(rng.integers(20, 120))
+        y = rng.random(n) < 0.2
+        # puntaje entero a proposito: replica los empates gruesos de NEWS2, que es donde
+        # las dos implementaciones podrian diferir.
+        puntaje = rng.integers(0, 8, n).astype(float)
+        for objetivo in (0.3, 0.5, 0.7, 0.9):
+            por_curva = alertas.tasa_para_sensibilidad(
+                alertas.curva_operacion(y, puntaje), objetivo
+            )
+            rapida = alertas.tasa_alertas_a_sensibilidad(y, puntaje, objetivo)
+            coinciden = (np.isnan(por_curva) and np.isnan(rapida)) or abs(
+                por_curva - rapida
+            ) < 1e-12
+            assert coinciden, f"divergen: {por_curva} vs {rapida} en objetivo {objetivo}"
+
+
+def test_dos_sistemas_identicos_no_reducen_nada():
+    rng = np.random.default_rng(5)
+    y = rng.random(300) < 0.15
+    puntaje = rng.random(300)
+    punto, lo, hi = alertas.reduccion_relativa(y, puntaje, puntaje, remuestreos=200)
+    assert abs(punto) < 1e-9, f"un sistema contra si mismo dio {punto}"
+
+
+def test_un_sistema_que_domina_da_reduccion_positiva():
+    """Si el propio ordena perfecto y el rival al azar, la reduccion tiene que ser > 0."""
+    rng = np.random.default_rng(6)
+    y = np.r_[np.ones(60), np.zeros(340)].astype(bool)
+    perfecto = y.astype(float) + rng.normal(0, 0.01, len(y))
+    azar = rng.random(len(y))
+    punto, lo, hi = alertas.reduccion_relativa(y, azar, perfecto, remuestreos=200)
+    assert punto > 0.3, f"el sistema perfecto solo redujo {punto:.1%}"
+    assert lo > 0, "el IC del caso facil no deberia cruzar el cero"
+
+
+def test_el_punto_cae_dentro_del_intervalo():
+    rng = np.random.default_rng(7)
+    y = rng.random(400) < 0.12
+    rival = rng.random(400)
+    propio = rival + rng.normal(0, 0.3, 400)
+    punto, lo, hi = alertas.reduccion_relativa(y, rival, propio, remuestreos=300)
+    if not np.isnan(lo):
+        assert lo <= punto <= hi, f"{punto} fuera de [{lo}, {hi}]"
+
+
+def test_la_grilla_por_defecto_es_el_rango_clinico():
+    """50-80 %: por debajo la escala no cumple su funcion, por encima es inaplicable."""
+    assert alertas.GRILLA_SENSIBILIDAD == (0.50, 0.60, 0.70, 0.80)
+
+
 PRUEBAS = [
     test_la_matriz_no_incluye_biomarcadores,
     test_la_matriz_es_exactamente_las_features_declaradas,
@@ -205,6 +264,11 @@ PRUEBAS = [
     test_una_sensibilidad_inalcanzable_devuelve_nan,
     test_la_tolerancia_no_descarta_el_umbral_que_empata,
     test_el_intervalo_de_reduccion_cubre_el_valor_puntual,
+    test_la_version_rapida_coincide_con_la_que_usa_la_curva,
+    test_dos_sistemas_identicos_no_reducen_nada,
+    test_un_sistema_que_domina_da_reduccion_positiva,
+    test_el_punto_cae_dentro_del_intervalo,
+    test_la_grilla_por_defecto_es_el_rango_clinico,
 ]
 
 
