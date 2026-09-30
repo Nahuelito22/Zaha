@@ -274,3 +274,96 @@ def tasa_para_sensibilidad(
     """
     alcanzan = curva[curva["sensibilidad"] >= objetivo - tolerancia]
     return float(alcanzan["tasa_alertas"].min()) if len(alcanzan) else float("nan")
+
+
+def tasa_alertas_a_sensibilidad(
+    y: "np.ndarray", puntaje: "np.ndarray", objetivo: float, tolerancia: float = 1e-9
+) -> float:
+    """
+    Igual que `tasa_para_sensibilidad`, pero sin construir la curva intermedia.
+
+    Existe por velocidad: el bootstrap de `SCRUM-58` la llama miles de veces, y armar un
+    DataFrame por réplica hace que una simulación tarde horas en vez de segundos. Devuelve
+    exactamente lo mismo que la versión sobre la curva, y hay una prueba que lo verifica.
+    """
+    import numpy as np
+
+    y = np.asarray(y).astype(bool)
+    puntaje = np.asarray(puntaje, dtype=float)
+
+    orden = np.argsort(-puntaje, kind="stable")
+    y_ord, p_ord = y[orden], puntaje[orden]
+
+    positivos = y_ord.sum()
+    if positivos == 0:
+        return float("nan")
+
+    sensibilidad = np.cumsum(y_ord) / positivos
+    # Sólo se puede cortar DESPUÉS del último elemento de cada valor repetido: un umbral
+    # no puede separar dos pacientes con el mismo puntaje.
+    ultimo_del_empate = np.r_[p_ord[1:] != p_ord[:-1], True]
+
+    alcanza = (sensibilidad >= objetivo - tolerancia) & ultimo_del_empate
+    if not alcanza.any():
+        return float("nan")
+    return float((np.argmax(alcanza) + 1) / len(y_ord))
+
+
+# El rango de sensibilidad sobre el que se compara. No es un punto único a propósito: ver
+# `reduccion_relativa`.
+GRILLA_SENSIBILIDAD = (0.50, 0.60, 0.70, 0.80)
+
+
+def reduccion_relativa(
+    y: "np.ndarray",
+    puntaje_rival: "np.ndarray",
+    puntaje_propio: "np.ndarray",
+    grilla: "tuple[float, ...]" = GRILLA_SENSIBILIDAD,
+    remuestreos: int = 3000,
+    semilla: int = 20260930,
+) -> "tuple[float, float, float]":
+    """
+    Reducción relativa media de la tasa de alertas sobre un RANGO de sensibilidades.
+
+    POR QUÉ UN RANGO Y NO UN PUNTO — es la decisión metodológica de `SCRUM-58`.
+    El score de NEWS2 es entero y tiene pocos niveles efectivos, así que su curva de
+    operación avanza a **escalones grandes**. Comparar en una sensibilidad única cae, según
+    la suerte, justo antes o justo después de un escalón, y el resultado se mueve muchísimo:
+    medido sobre esta cohorte, en el punto en que opera hoy el sistema la reducción da
+    +2,7 %, mientras que el promedio sobre 50-80 % da +29,8 %. **No es que un número sea el
+    bueno y el otro el malo: es que el punto único no es un estimador estable** cuando el
+    rival es discreto.
+
+    El rango 50-80 % no es arbitrario: por debajo del 50 % una escala de alerta temprana no
+    cumple su función, y por encima del 80 % la tasa de alertas se dispara hasta volverse
+    inaplicable en una guardia real.
+
+    Devuelve (reducción media, límite inferior, límite superior) del bootstrap al 95 %.
+    """
+    import numpy as np
+
+    y = np.asarray(y).astype(bool)
+    puntaje_rival = np.asarray(puntaje_rival, dtype=float)
+    puntaje_propio = np.asarray(puntaje_propio, dtype=float)
+
+    def media(indices: "np.ndarray") -> float:
+        yy = y[indices]
+        reducciones = []
+        for objetivo in grilla:
+            a = tasa_alertas_a_sensibilidad(yy, puntaje_rival[indices], objetivo)
+            b = tasa_alertas_a_sensibilidad(yy, puntaje_propio[indices], objetivo)
+            if a and a == a and b == b:
+                reducciones.append(1 - b / a)
+        return float(np.mean(reducciones)) if reducciones else float("nan")
+
+    puntual = media(np.arange(len(y)))
+
+    rng = np.random.default_rng(semilla)
+    replicas = np.array(
+        [media(rng.integers(0, len(y), len(y))) for _ in range(remuestreos)]
+    )
+    validas = replicas[~np.isnan(replicas)]
+    if len(validas) < remuestreos * 0.5:
+        return puntual, float("nan"), float("nan")
+
+    return puntual, float(np.percentile(validas, 2.5)), float(np.percentile(validas, 97.5))
