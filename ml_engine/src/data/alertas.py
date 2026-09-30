@@ -216,3 +216,61 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+# =============================================================================
+# Curva de operación — la primitiva de comparación de SCRUM-58
+# =============================================================================
+def curva_operacion(y: "pd.Series | np.ndarray", puntaje: "pd.Series | np.ndarray") -> pd.DataFrame:
+    """
+    Tasa de alertas y sensibilidad para cada umbral posible de `puntaje`.
+
+    Es la forma honesta de comparar dos sistemas de alerta que no comparten escala: NEWS2
+    puntúa 0-20 y un modelo devuelve una probabilidad entre 0 y 1, así que sus umbrales no
+    se pueden comparar directamente. Lo que sí se compara es **a cuánta sensibilidad, a qué
+    costo de alertas** llega cada uno.
+
+    Devuelve una fila por umbral, ordenada de la más exigente a la más laxa.
+    """
+    import numpy as np
+
+    y = np.asarray(y).astype(bool)
+    puntaje = np.asarray(puntaje, dtype=float)
+
+    # Se evalúan los umbrales que efectivamente cambian algo: los valores observados.
+    umbrales = np.unique(puntaje)
+    filas = []
+    for u in umbrales:
+        alerta = puntaje >= u
+        filas.append(
+            {
+                "umbral": float(u),
+                "tasa_alertas": float(alerta.mean()),
+                "sensibilidad": float(alerta[y].mean()) if y.any() else float("nan"),
+                "especificidad": float((~alerta[~y]).mean()) if (~y).any() else float("nan"),
+            }
+        )
+    return pd.DataFrame(filas).sort_values("umbral", ascending=False).reset_index(drop=True)
+
+
+def tasa_para_sensibilidad(
+    curva: pd.DataFrame, objetivo: float, tolerancia: float = 1e-9
+) -> float:
+    """
+    La tasa de alertas MÁS BARATA que alcanza al menos `objetivo` de sensibilidad.
+
+    Es la comparación de `SCRUM-58` en una línea: fijada una sensibilidad, ¿cuántas alertas
+    cuesta? Gana el sistema que devuelva el número más chico.
+
+    `tolerancia` existe por una trampa real: la sensibilidad de NEWS2 sale de una división
+    entera —29 de 54 es 0,537037…— y si el llamador pasa el valor redondeado a 0,537, la
+    comparación `>=` descarta justo el umbral que empata y devuelve el siguiente, que es más
+    caro. El sistema comparado quedaría injustamente favorecido. Con la tolerancia por
+    defecto, un objetivo redondeado a 3 decimales sigue sin empatar; pasar el valor exacto
+    es lo correcto, y la tolerancia cubre el error de punto flotante de ese valor exacto.
+
+    Devuelve NaN si ningún umbral llega a esa sensibilidad — que es un resultado, no un
+    error: significa que ese sistema no puede operar a esa sensibilidad.
+    """
+    alcanzan = curva[curva["sensibilidad"] >= objetivo - tolerancia]
+    return float(alcanzan["tasa_alertas"].min()) if len(alcanzan) else float("nan")

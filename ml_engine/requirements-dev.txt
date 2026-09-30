@@ -29,7 +29,8 @@ xlrd~=2.0.2              # el archivo de Zenodo es .xls legacy (OLE2); openpyxl 
 
 # --- Modelado ---
 scikit-learn~=1.9.0
-xgboost~=3.4.1           # baseline y modelo principal segun ADR-005
+xgboost~=3.4.1           # instalado el 30/09. OJO: con 54 eventos PIERDE contra
+                         # una regresion logistica; ver el hallazgo en models/baseline.py
 torch~=2.13.0            # solo para la LSTM, que es hipotesis bajo prueba
 
 # --- Exportación e inferencia (SCRUM-59) ---
