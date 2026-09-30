@@ -328,3 +328,64 @@ Tres razones más:
 - El ADR-002 queda **más** desactualizado: ya no hay "un dataset principal", hay dos
   cohortes con roles distintos. Reescribirlo es deuda pendiente.
 - La licencia CC0 no exige atribución legal, pero el estudio **se cita igual** en la tesis.
+
+---
+
+## ADR-010 — Qué modelo es el principal depende del tamaño de muestra (refina ADR-005)
+**Fecha:** 2026-09-30 · **Estado:** ✅ Aceptada
+
+### Contexto
+El **ADR-005** fija la progresión de modelado y declara: *"XGBoost sobre snapshot (última
+observación + estáticas) ← modelo principal"*. Se apoyaba en literatura —"Less is More"—
+que muestra que XGBoost sobre el snapshot iguala a redes que procesan 48 h de historia.
+
+Al entrenar de verdad sobre la cohorte TRIAGE (`SCRUM-56`), con **54 eventos**, eso no se
+sostuvo. Medido con validación cruzada repetida:
+
+| Modelo | AUROC fuera de fold |
+|---|---|
+| XGBoost, 300 árboles, profundidad 3 | 0,613 |
+| XGBoost, 60 árboles, profundidad 2 | 0,728 |
+| XGBoost, 30 árboles, profundidad 1 | 0,733 |
+| **Regresión logística, sin ajustar** | **0,759** |
+| NEWS2 (el rival) | 0,728 |
+
+Hay que bajarle la capacidad a XGBoost hasta casi nada para que **empate** con NEWS2,
+mientras que una regresión logística sin ningún ajuste le gana. Con validación cruzada
+**anidada** —la selección de familia ocurre dentro del bucle de evaluación— el resultado se
+confirma: **AUROC 0,771**, y los **5 folds externos eligen la logística sin excepción**.
+
+### Decisión
+**El modelo principal no se fija por ADR: lo elige la validación cruzada anidada entre un
+catálogo de familias.** El catálogo vive en `ml_engine/src/models/baseline.py` (`MODELOS`) e
+incluye la regresión logística junto a tres configuraciones de XGBoost.
+
+A la escala actual (1.300 pacientes, 54 eventos) el modelo elegido es la **regresión
+logística**, y es la que se exporta a ONNX en `SCRUM-59`.
+
+### Razón
+No es que XGBoost sea peor en general: la literatura del ADR-005 se midió sobre cohortes de
+decenas de miles de episodios. Es que **con 54 eventos y 7 features, la capacidad de un
+ensamble de árboles se gasta en sobreajustar**. La lectura correcta del ADR-005 es "a escala
+suficiente el snapshot alcanza", no "XGBoost siempre gana".
+
+Fijar la familia por decreto tenía además un problema de método: si el ADR dice XGBoost, la
+regresión logística nunca compite y el resultado —que el modelo simple gana— no se descubre.
+Dejarlas competir dentro del bucle es lo que permitió encontrarlo.
+
+Y hay una asimetría que obliga a la CV anidada: **NEWS2 no se ajusta sobre estos datos**, así
+que su AUROC es insesgado. Cualquier configuración elegida mirando el CV está inflada, de
+modo que un modelo que sólo *empata* con NEWS2 tras ajustarlo es en realidad **peor**.
+
+### Consecuencias
+- **El ADR-004 también queda desactualizado en su detalle**: planeaba "PyTorch → ONNX" y el
+  artefacto real es `scikit-learn → ONNX` vía `skl2onnx`. La decisión de fondo —servir ONNX
+  y no el framework de entrenamiento— sigue intacta y es la que importaba.
+- **Se exporta el pipeline completo**, no sólo el clasificador: imputación, escalado y
+  regresión en un solo grafo. Si la API reimplementara el escalado, cualquier diferencia
+  produciría predicciones distintas sin que nada falle.
+- **Esto puede volver a cambiar.** Cuando llegue la base completa de MIMIC (`SCRUM-48`), con
+  varios órdenes de magnitud más eventos, es esperable que XGBoost vuelva a ganar. El
+  catálogo está armado para que ese cambio sea un resultado de la CV y no una edición
+  manual: no hay que tocar nada, sólo volver a correr.
+- La elección quedó registrada en el sidecar de metadatos que viaja con el `.onnx`.

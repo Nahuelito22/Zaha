@@ -1,0 +1,72 @@
+{
+  "modelo": "regresion_logistica",
+  "por_que_no_xgboost": "Con 54 eventos la regresion logistica gana; los 5 folds de la CV anidada de SCRUM-56 la eligieron. El ADR-005 supone XGBoost y necesita enmienda.",
+  "pipeline": "SimpleImputer -> StandardScaler -> LogisticRegression(class_weight=balanced)",
+  "features_en_orden": [
+    "frecuencia_respiratoria",
+    "spo2",
+    "temperatura",
+    "presion_sistolica",
+    "frecuencia_cardiaca",
+    "confusion",
+    "edad"
+  ],
+  "features_excluidas": {
+    "cuales": [
+      "MR-proADM",
+      "PCT"
+    ],
+    "por_que": "no estan disponibles al pie de la cama; incluirlas haria el modelo indesplegable"
+  },
+  "entrenado_sobre": {
+    "cohorte": "triage-zenodo",
+    "n": 1300,
+    "evento": "muerte_30d",
+    "eventos": 54,
+    "prevalencia": 0.0415
+  },
+  "umbral": {
+    "elegir_es_decision_clinica": true,
+    "nota": "depende de cuantas alertas por turno tolera la guardia",
+    "usar_tasa_de_alertas_esperada": "es la estimacion fuera de fold. La in_sample se incluye solo para mostrar cuanto optimismo tendria confiar en ella; NO usarla para dimensionar la carga.",
+    "curva": [
+      {
+        "sensibilidad_objetivo": 0.5,
+        "umbral": 0.344339,
+        "tasa_de_alertas_esperada": 0.1946,
+        "tasa_de_alertas_in_sample_optimista": 0.1538
+      },
+      {
+        "sensibilidad_objetivo": 0.6,
+        "umbral": 0.282647,
+        "tasa_de_alertas_esperada": 0.2523,
+        "tasa_de_alertas_in_sample_optimista": 0.2392
+      },
+      {
+        "sensibilidad_objetivo": 0.7,
+        "umbral": 0.224004,
+        "tasa_de_alertas_esperada": 0.3038,
+        "tasa_de_alertas_in_sample_optimista": 0.2854
+      },
+      {
+        "sensibilidad_objetivo": 0.8,
+        "umbral": 0.169515,
+        "tasa_de_alertas_esperada": 0.4792,
+        "tasa_de_alertas_in_sample_optimista": 0.4254
+      }
+    ]
+  },
+  "paridad_onnx_vs_sklearn": {
+    "filas_verificadas": 1300,
+    "desviacion_maxima": 2.3549546024348444e-07,
+    "decisiones_cambiadas_por_umbral": {
+      "0.5": 0,
+      "0.6": 0,
+      "0.7": 0,
+      "0.8": 0
+    },
+    "aceptable": true
+  },
+  "advertencia": "La reduccion de alertas contra NEWS2 NO esta demostrada con esta cohorte: +29,8 % con IC95 [-8,5 %, +44,7 %], que incluye el cero. Ver SCRUM-58.",
+  "generado": "2026-09-30"
+}

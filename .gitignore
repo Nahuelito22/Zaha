@@ -342,6 +342,19 @@ ml_engine/models/**
 *.pt
 *.pth
 *.keras
+
+# Excepcion acotada: el baseline exportado en SCRUM-59 y su sidecar de metadatos.
+#
+# Se versionan por tres razones: pesan 864 bytes y ~2 KB, son el artefacto que la API de
+# SCRUM-62/63 necesita para desplegarse, y estan entrenados sobre la cohorte TRIAGE, que
+# es CC0 y no tiene restriccion de redistribucion.
+#
+# ATENCION: esta excepcion NO se extiende a modelos entrenados sobre MIMIC-IV-ED. Ese
+# dataset esta bajo un DUA de PhysioNet que prohibe redistribuirlo, y un modelo entrenado
+# sobre datos restringidos hereda la restriccion. Cuando llegue la credencial (SCRUM-48) y
+# se reentrene sobre MIMIC, el artefacto resultante va con OTRO nombre y se queda ignorado.
+!ml_engine/models/zaha_baseline.onnx
+!ml_engine/models/zaha_baseline.metadata.json
 *.joblib
 
 # Credenciales de PhysioNet / Google Colab

@@ -176,8 +176,11 @@ OBSERVACIONES = pa.DataFrameSchema(
         "news2_score": pa.Column(
             "Int64", checks=pa.Check.in_range(0, SCORE_MAXIMO), nullable=True
         ),
+        # `str` y no `object`: en pandas 3 las cadenas dejan de ser `object` y pasan a
+        # dtype `str`, asi que declarar `object` hace fallar el esquema contra el mismo
+        # dato. Pandera mapea `str` al tipo correcto en las dos versiones.
         "news2_riesgo": pa.Column(
-            object, checks=pa.Check.isin(NIVELES_RIESGO), nullable=True
+            str, checks=pa.Check.isin(NIVELES_RIESGO), nullable=True
         ),
         # Estas tres van SIN dtype a propósito: en memoria son `object` (enteros y
         # booleanos mezclados con el nulo de las tomas no puntuables), pero al volver
@@ -200,8 +203,8 @@ EPISODIOS = pa.DataFrameSchema(
         "paciente_id": pa.Column(nullable=False),
         "ingreso_en": pa.Column("datetime64[ns]", nullable=True),
         "egreso_en": pa.Column("datetime64[ns]", nullable=True),
-        "llegada": pa.Column(object, nullable=True),
-        "disposicion": pa.Column(object, nullable=True),
+        "llegada": pa.Column(str, nullable=True),
+        "disposicion": pa.Column(str, nullable=True),
         "desenlace_adverso": pa.Column(bool, nullable=False),
         # Una estadía negativa sería un egreso anterior al ingreso. El techo de 30 días
         # es generoso a propósito: en guardia lo normal son horas, pero MIMIC tiene

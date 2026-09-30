@@ -251,14 +251,25 @@ def evaluar_anidada(
     )
 
 
-def entrenar(df: pd.DataFrame, evento: str = "muerte_30d", semilla: int = SEMILLA):
-    """Entrena sobre TODOS los datos. Para exportar (`SCRUM-59`), nunca para evaluar."""
+def entrenar(
+    df: pd.DataFrame,
+    evento: str = "muerte_30d",
+    modelo: str = "logistica",
+    semilla: int = SEMILLA,
+):
+    """
+    Entrena sobre TODOS los datos. Para exportar (`SCRUM-59`), nunca para evaluar.
+
+    El default es `logistica` porque es lo que eligen los 5 folds de `evaluar_anidada`
+    a este tamaño de muestra (ADR-010). No está fijado por decreto: si con más eventos
+    la CV anidada pasara a elegir otra familia, se cambia acá el default y se reexporta.
+    """
     X = matriz(df).to_numpy(dtype=float)
     y = df[evento].to_numpy().astype(int)
     escala = (len(y) - y.sum()) / max(y.sum(), 1)
-    modelo = _modelo(semilla, escala)
-    modelo.fit(X, y)
-    return modelo
+    estimador = MODELOS[modelo](semilla, escala)
+    estimador.fit(X, y)
+    return estimador
 
 
 def construir(procesados: Path, evento: str = "muerte_30d") -> ResultadoCV:
