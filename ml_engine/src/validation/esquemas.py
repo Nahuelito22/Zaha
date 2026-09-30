@@ -116,6 +116,31 @@ EDSTAYS_CRUDO = pa.DataFrameSchema(
 )
 
 
+# La cohorte TRIAGE (ADR-009). Otro estudio, otro formato, mismos rangos plausibles.
+#
+# Una sola fila por paciente —el snapshot de admisión— así que no hay `episodio_id` ni
+# tiempo: es deliberado, no un olvido. Este dataset NO soporta la etiqueta v2 ni la LSTM;
+# soporta el encuadre snapshot del ADR-005.
+TRIAGE_CRUDO = pa.DataFrameSchema(
+    {
+        "resp_rate": pa.Column(nullable=False),
+        "SpO2": pa.Column(nullable=False),
+        "temp": pa.Column(nullable=False),
+        "BPS": pa.Column(nullable=False),
+        "HR": pa.Column(nullable=False),
+        # La "C" de NEWS2, que MIMIC no tiene en ninguna fila. 0/1.
+        "confusion": pa.Column(checks=pa.Check.isin([0, 1]), nullable=False),
+        # Los dos desenlaces. Son de 30 días y de ingreso a UCI: NO son la etiqueta v2.
+        "death30d": pa.Column(checks=pa.Check.isin([0, 1]), nullable=False),
+        "ICU": pa.Column(checks=pa.Check.isin([0, 1]), nullable=False),
+        "age": pa.Column(nullable=False),
+        "country": pa.Column(nullable=False),
+    },
+    strict=False,
+    name="TRIAGE (crudo)",
+)
+
+
 # =============================================================================
 # Salida: las dos tablas que se escriben a parquet.
 # =============================================================================

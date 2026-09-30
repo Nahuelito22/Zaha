@@ -24,6 +24,9 @@ polars~=1.44.1           # para los pasos donde pandas se queda corto en memoria
 # --- Validación de esquemas (SCRUM-52) ---
 pandera~=0.32.1
 
+# --- Cohorte TRIAGE (ADR-009) ---
+xlrd~=2.0.2              # el archivo de Zenodo es .xls legacy (OLE2); openpyxl no lo lee
+
 # --- Modelado ---
 scikit-learn~=1.9.0
 xgboost~=3.4.1           # baseline y modelo principal segun ADR-005
