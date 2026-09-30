@@ -294,7 +294,16 @@ skills-lock.json
 .mcp-auth/
 
 # Guia de desarrollo y Backlog
-/Plan
+#
+# Plan/ SE VERSIONA desde el 2026-09-30. Estaba ignorada, y eso dejaba los 9 ADR y los
+# documentos de epica SIN NINGUN RESPALDO: si se borraba la carpeta habia que rehacerlos.
+# Es el mismo problema que tenian burndown.py y figura_etiqueta.py en ayudas_y_recursos/
+# y por el que se movieron a scripts/.
+#
+# Antes de versionarla se escaneo en busca de tokens, claves, credenciales y datos
+# personales: no hay ninguno. jira_export.py solo usa csv y os, no hace llamadas HTTP.
+# Los datos clinicos restringidos NO viven aca sino en ml_engine/data/, que sigue
+# ignorada mas abajo.
 
 # =============================================================================
 # Datos clínicos restringidos (PhysioNet / MIMIC-IV-ED)
