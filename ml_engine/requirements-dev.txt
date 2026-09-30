@@ -34,7 +34,10 @@ xgboost~=3.4.1           # instalado el 30/09. OJO: con 54 eventos PIERDE contra
 torch~=2.13.0            # solo para la LSTM, que es hipotesis bajo prueba
 
 # --- Exportación e inferencia (SCRUM-59) ---
-onnx~=1.22.0
+onnx~=1.23.1
+skl2onnx~=1.20.0         # convierte pipelines de scikit-learn a ONNX. Hace falta porque el
+                         # modelo elegido resulto ser una regresion logistica y no XGBoost:
+                         # ver el hallazgo en src/models/baseline.py
 
 # --- Notebooks y figuras ---
 jupyterlab~=4.6.3
