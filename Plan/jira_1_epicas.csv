@@ -1,0 +1,21 @@
+﻿Issue Type,Summary,Description,Labels
+Epic,Épica 1 — Infraestructura y Setup Base,"Establecer el monorepo, repositorios, reglas de rama y entornos de desarrollo.
+
+Entregable: estructura de carpetas compilando sin errores.",iteracion-1 infra owner-nahuel
+Epic,Épica 2 — Backend y Motor Determinístico NEWS2,"Construir la base de datos inspirada en FHIR y la lógica matemática en la nube.
+
+Entregable: base capaz de recibir datos crudos y devolver niveles de riesgo instantáneamente.",iteracion-1 backend owner-nahuel
+Epic,Épica 3 — Frontend PWA y Landing Page,"Desarrollar la interfaz pública y el sistema clínico de bolsillo.
+
+Entregable: PWA instalable en iOS/Android consumiendo la base de datos real.",iteracion-1 frontend owner-nahuel
+Epic,Épica 4 — Data Engineering y Motor de IA,"Procesamiento de series temporales médicas y entrenamiento del modelo predictivo.
+
+Métrica principal: tasa de alertas a sensibilidad igualada a NEWS2 (referencia a batir: 37,6 alertas por 100 pacientes-día). No AUROC, no accuracy.
+
+Entregable: modelo entrenado y exportado a ONNX.",iteracion-2 ml owner-nahuel
+Epic,Épica 5 — API de Inferencia e Integración,"Conectar el modelo predictivo con la aplicación clínica.
+
+Entregable: sistema completo funcionando de extremo a extremo.",iteracion-2 backend ml owner-nahuel
+Epic,"Épica 6 — Marco Regulatorio, Auditoría y Entregables Académicos","Encuadre regulatorio del producto como SaMD, trazabilidad legal, y los entregables de la cátedra.
+
+Entregable: documentación de cumplimiento y presentación final de Prácticas Profesionales 3.",iteracion-3 regulatorio academico owner-tercero
