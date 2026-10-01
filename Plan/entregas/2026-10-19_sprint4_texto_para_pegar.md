@@ -24,14 +24,22 @@ Las cuatro de resultados ya están generadas en
 `ml_engine/data/interim/figuras/`. Hay que copiarlas a la carpeta de la entrega y subirlas
 a Drive.
 
-| Hueco | Archivo | De dónde sale |
+**Las seis están listas** en `Desktop\Zaha_Entrega_19-10\`. Solo falta subirlas a Drive
+e insertarlas desde *Insertar → Imagen → Drive*.
+
+| Hueco | Archivo | Generado por |
 |---|---|---|
-| IMAGEN 20 | `20_jira_sprint4.jpg` | **Capturar.** Vista de issues de Jira con la columna *Story point estimate*, filtrando el Sprint 4 |
-| IMAGEN 21 | `21_jira_bloqueadas.jpg` | **Capturar.** Las tareas abiertas, mostrando las dos bloqueadas por PhysioNet |
-| IMAGEN 22 | `07_curva_operacion_news2.png` | ya generada |
-| IMAGEN 23 | `08_curvas_superpuestas.png` | ya generada ← **la figura central de la entrega** |
-| IMAGEN 24 | `08_intervalo_reduccion.png` | ya generada |
-| IMAGEN 25 | `burndown_sprint4.png` | **Regenerar** con `scripts/burndown.py` |
+| IMAGEN 20 | `20_jira_sprint4.png` | `scripts/figura_sprint4.py` |
+| IMAGEN 21 | `21_jira_bloqueadas.png` | `scripts/figura_sprint4.py` |
+| IMAGEN 22 | `22_curva_operacion_news2.png` | notebook 07 |
+| IMAGEN 23 | `23_modelo_vs_news2.png` | notebook 08 ← **la figura central de la entrega** |
+| IMAGEN 24 | `24_intervalo_reduccion.png` | notebook 08 |
+| IMAGEN 25 | `25_burndown_sprint4.png` | `scripts/burndown.py` |
+
+> **Las figuras 20 y 21 son tablas compuestas, no capturas de pantalla**, y su pie lo
+> declara. La vista de Jira no entra completa en una captura: el viewport del navegador
+> queda fijo en 633 px de alto y la tabla tiene scroll propio, así que de 15 ítems sólo
+> entran 8. Los datos salen de `sprint = 6` leídos por la API el 01/10/2026.
 
 ---
 
@@ -67,13 +75,13 @@ El sprint cerró con nueve de los quince ítems completos. De los seis restantes
 
 Evidencia de gestión en Jira
 
-[ IMAGEN 20 — insertar aquí: 20_jira_sprint4.jpg ]
+[ IMAGEN 20 — insertar aquí: 20_jira_sprint4.png ]
 
-Figura 20. Estado del Sprint 4. Los quince ítems con su responsable, su prioridad, su estimación en puntos de historia y su estado. Cincuenta y ocho de los setenta y cinco puntos comprometidos quedaron completos.
+Figura 20. Estado del Sprint 4. Los quince ítems registrados en el tablero, con su responsable, su prioridad, su estimación en puntos de historia y su estado. Cincuenta y ocho de los setenta y cinco puntos comprometidos quedaron completos. La tabla se compuso a partir de los datos del tablero porque la vista del gestor no permite mostrar los quince ítems en una sola pantalla.
 
-[ IMAGEN 21 — insertar aquí: 21_jira_bloqueadas.jpg ]
+[ IMAGEN 21 — insertar aquí: 21_jira_bloqueadas.png ]
 
-Figura 21. Trabajo bloqueado por una dependencia externa. Las tareas que no pudieron completarse porque esperan la acreditación para acceder al conjunto de datos completo. Se mantienen visibles y con su bloqueo declarado en lugar de ocultarlas, porque un tablero que no muestra lo que está trabado deja de ser útil para la gestión.
+Figura 21. El trabajo no completado, con el motivo de cada caso. Ninguno de los seis ítems quedó abierto por falta de avance: tres dependen de la acreditación externa, dos son historias de usuario que se cierran cuando terminan sus tareas hijas, y uno corresponde a trabajo de interoperabilidad ajeno al objetivo del sprint. Se mantienen visibles y con su motivo declarado en lugar de ocultarlos, porque un tablero que no muestra lo que está trabado deja de ser útil para la gestión.
 
 Evidencia del incremento funcionando
 
@@ -131,9 +139,10 @@ El próximo sprint se corre del modelado a la integración: exponer el modelo co
 
 ## Lo que hay que decidir antes de pegar
 
-1. **`SCRUM-82` no tiene responsable asignado.** Se nota en la captura del tablero.
-2. **El burndown del Sprint 4 hay que generarlo.** No baja a cero: queda en 17 puntos, con
-   la misma nota al pie que llevó el del Sprint 3.
+1. ~~`SCRUM-82` sin responsable~~ → asignado a Gustavo García. Además **no estaba en el
+   sprint**: la vista decía *14 de 15* hasta que se lo agregó, así que el tablero y este
+   texto se habrían contradicho en la entrega.
+2. ~~Generar el burndown~~ → hecho. No baja a cero: queda en 17 puntos, con nota al pie.
 3. **Las fechas del sprint** (6 al 19 de octubre) siguen la secuencia de los recuadros. El
    trabajo real se hizo entre el 21 y el 30 de septiembre, adelantado como en los sprints
    anteriores; el texto no lo menciona porque las tres entregas previas tampoco lo hacen.
