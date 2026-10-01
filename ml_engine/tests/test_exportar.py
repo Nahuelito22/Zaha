@@ -122,7 +122,10 @@ def _meta(df):
         ruta = Path(tmp) / "m.onnx"
         exportar.exportar(modelo, X.shape[1], ruta)
         paridad = exportar.verificar_paridad(modelo, ruta, X)
-    return exportar.metadatos(df, modelo, "muerte_30d", paridad)
+    # Se pasan puntajes fuera de fold reales: sin esto, `tasa_de_alertas_esperada`
+    # queda en None y la prueba no ejercita el camino que importa.
+    oof = baseline.evaluar_anidada(df, n_externo=3, n_interno=2).puntajes
+    return exportar.metadatos(df, modelo, "muerte_30d", paridad, fuera_de_fold=oof)
 
 
 def test_los_metadatos_congelan_el_orden_de_las_features():
@@ -147,8 +150,32 @@ def test_los_metadatos_publican_la_curva_de_umbrales():
     meta = _meta(_cohorte())
     curva = meta["umbral"]["curva"]
     assert len(curva) == len(exportar.SENSIBILIDADES_PUBLICADAS)
-    assert all("umbral" in p and "tasa_de_alertas" in p for p in curva)
+    assert all("umbral" in p for p in curva)
     assert meta["umbral"]["elegir_es_decision_clinica"] is True
+
+
+def test_la_curva_distingue_la_tasa_esperada_de_la_in_sample():
+    """
+    La clave que importa es `tasa_de_alertas_esperada`, que sale de los puntajes fuera de
+    fold. La in-sample se publica SOLO para mostrar cuanto optimismo tendria confiar en
+    ella; si alguien dimensiona la carga de alertas con esa, la subestima.
+    """
+    meta = _meta(_cohorte())
+    for punto in meta["umbral"]["curva"]:
+        assert "tasa_de_alertas_esperada" in punto
+        assert "tasa_de_alertas_in_sample_optimista" in punto
+    assert "fuera de fold" in meta["umbral"]["usar_tasa_de_alertas_esperada"]
+
+    # La esperada no puede ser optimista respecto de la in-sample: el modelo final vio a
+    # estos pacientes, asi que su tasa in-sample es la cota inferior.
+    for punto in meta["umbral"]["curva"]:
+        esperada = punto["tasa_de_alertas_esperada"]
+        in_sample = punto["tasa_de_alertas_in_sample_optimista"]
+        if esperada is not None and in_sample is not None:
+            assert esperada >= in_sample - 1e-9, (
+                f"la tasa esperada ({esperada}) salio por debajo de la in-sample "
+                f"({in_sample}): el sentido del optimismo esta invertido"
+            )
 
 
 def test_los_metadatos_declaran_que_la_reduccion_no_esta_demostrada():
@@ -181,6 +208,7 @@ PRUEBAS = [
     test_los_metadatos_congelan_el_orden_de_las_features,
     test_los_metadatos_no_publican_biomarcadores_como_entrada,
     test_los_metadatos_publican_la_curva_de_umbrales,
+    test_la_curva_distingue_la_tasa_esperada_de_la_in_sample,
     test_los_metadatos_declaran_que_la_reduccion_no_esta_demostrada,
     test_los_metadatos_son_json_serializable,
     test_el_pipeline_declarado_coincide_con_el_modelo_elegido,
