@@ -124,6 +124,64 @@ def verificar_paridad(modelo, ruta_onnx: Path, X: np.ndarray) -> Paridad:
     return Paridad(filas=len(X), desviacion_maxima=desviacion, decisiones_cambiadas=cambiadas)
 
 
+def explicabilidad(modelo, features: list[str]) -> dict | None:
+    """
+    Los coeficientes que permiten explicar una predicción SIN scikit-learn (SCRUM-66).
+
+    POR QUÉ ESTO VIAJA EN EL SIDECAR Y NO SE CALCULA EN LA API
+    La API no lleva scikit-learn —sirve un ONNX— y el grafo ONNX es opaco: de él se saca
+    la probabilidad, no de dónde salió. Pero el modelo elegido es una **regresión
+    logística sobre features estandarizadas**, y para esa familia la contribución de cada
+    parámetro al log-odds es EXACTA:
+
+        logit(p) = intercepto + Σ coef_j · (x_j − media_j) / escala_j
+
+    No es una aproximación local tipo SHAP ni un sustituto entrenado aparte: es la
+    identidad algebraica del propio modelo. Que la explicación sea exacta importa más de
+    lo que parece — una explicación aproximada de una alerta clínica puede señalar el
+    parámetro equivocado y mandar a enfermería a mirar donde no es.
+
+    `media` y `escala` son del StandardScaler; `imputacion` son las medias del
+    SimpleImputer, necesarias para reproducir qué valor se usó cuando un parámetro falta.
+
+    DEVUELVE None SI EL MODELO NO ES LINEAL
+    Si algún día la CV anidada elige XGBoost, esta descomposición deja de existir y acá
+    tiene que aparecer `null`, no un número inventado. La API lo detecta y responde que no
+    hay explicación disponible, en vez de mostrar una falsa.
+    """
+    try:
+        imputador = modelo.named_steps["simpleimputer"]
+        escalador = modelo.named_steps["standardscaler"]
+        regresion = modelo.named_steps["logisticregression"]
+    except (AttributeError, KeyError):
+        return None
+
+    coeficientes = np.asarray(regresion.coef_).ravel()
+    if len(coeficientes) != len(features):
+        return None
+
+    return {
+        "forma": "logit(p) = intercepto + suma(coef_j * (x_j - media_j) / escala_j)",
+        "exacta": True,
+        "nota": (
+            "Descomposicion algebraica del modelo servido, no una aproximacion local. "
+            "Las contribuciones estan en log-odds y suman exactamente el logit."
+        ),
+        "intercepto": float(regresion.intercept_[0]),
+        "coeficientes": {f: float(c) for f, c in zip(features, coeficientes)},
+        "escalado_media": {
+            f: float(v) for f, v in zip(features, np.asarray(escalador.mean_).ravel())
+        },
+        "escalado_escala": {
+            f: float(v) for f, v in zip(features, np.asarray(escalador.scale_).ravel())
+        },
+        "imputacion_media": {
+            f: float(v)
+            for f, v in zip(features, np.asarray(imputador.statistics_).ravel())
+        },
+    }
+
+
 def metadatos(
     df: pd.DataFrame, modelo, evento: str, paridad: Paridad, fuera_de_fold=None
 ) -> dict:
@@ -168,6 +226,7 @@ def metadatos(
         ),
         "pipeline": "SimpleImputer -> StandardScaler -> LogisticRegression(class_weight=balanced)",
         "features_en_orden": baseline.FEATURES,
+        "explicabilidad": explicabilidad(modelo, baseline.FEATURES),
         "features_excluidas": {
             "cuales": list(baseline.EXCLUIDAS_POR_NO_ESTAR_AL_PIE_DE_LA_CAMA),
             "por_que": "no estan disponibles al pie de la cama; incluirlas haria el modelo indesplegable",

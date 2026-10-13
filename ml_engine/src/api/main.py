@@ -149,11 +149,44 @@ class PuntoDeOperacionRespuesta(BaseModel):
     elegido_por: Literal["cliente", "valor_por_defecto"]
 
 
+class ContribucionRespuesta(BaseModel):
+    parametro: str
+    valor: float
+    contribucion: float = Field(
+        description="En log-odds. Positivo empuja hacia la alerta, negativo la aleja."
+    )
+    direccion: Literal["aumenta", "reduce", "neutro"]
+
+
+class ExplicacionRespuesta(BaseModel):
+    """
+    La descomposición del logit, ordenada de mayor a menor influencia.
+
+    `reconstruye_la_probabilidad` tiene que ser `true` para mostrarla. Si fuera `false`,
+    la explicación no describe al modelo servido y mostrarla sería peor que no explicar
+    nada: señalaría el parámetro equivocado en una alerta clínica.
+    """
+
+    exacta: Literal[True] = True
+    intercepto: float
+    contribuciones: list[ContribucionRespuesta]
+    logit: float
+    probabilidad_reconstruida: float
+    reconstruye_la_probabilidad: bool
+
+
 class RespuestaDePrediccion(BaseModel):
     probabilidad: float
     alerta: bool
     punto_de_operacion: PuntoDeOperacionRespuesta
     es_estimacion: Literal[True] = True
+    explicacion: ExplicacionRespuesta | None = Field(
+        default=None,
+        description=(
+            "Ausente si el modelo servido no admite descomposicion exacta. En ese caso no "
+            "hay explicacion: no se sustituye por una aproximada."
+        ),
+    )
     advertencia: str
 
 
@@ -208,6 +241,26 @@ def predecir(pedido: PedidoDePrediccion) -> RespuestaDePrediccion:
     except cargador.PuntoNoCalibrado as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from None
 
+    explicacion = None
+    if resultado.explicacion is not None:
+        explicacion = ExplicacionRespuesta(
+            intercepto=round(resultado.explicacion.intercepto, 6),
+            contribuciones=[
+                ContribucionRespuesta(
+                    parametro=c.parametro,
+                    valor=c.valor,
+                    contribucion=round(c.contribucion, 6),
+                    direccion=c.direccion,
+                )
+                for c in resultado.explicacion.contribuciones
+            ],
+            logit=round(resultado.explicacion.logit, 6),
+            probabilidad_reconstruida=round(
+                resultado.explicacion.probabilidad_reconstruida, 6
+            ),
+            reconstruye_la_probabilidad=resultado.explicacion.reconstruye_la_probabilidad,
+        )
+
     return RespuestaDePrediccion(
         probabilidad=round(resultado.probabilidad, 6),
         alerta=resultado.alerta,
@@ -217,5 +270,6 @@ def predecir(pedido: PedidoDePrediccion) -> RespuestaDePrediccion:
             tasa_de_alertas_esperada=resultado.punto.tasa_de_alertas_esperada,
             elegido_por=elegido_por,
         ),
+        explicacion=explicacion,
         advertencia=str(m.metadatos.get("advertencia", "")),
     )
