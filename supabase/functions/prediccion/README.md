@@ -1,0 +1,70 @@
+# Edge Function `prediccion` (SCRUM-64)
+
+Puente entre la aplicación clínica y el motor de IA. Existe porque **el Space de Hugging
+Face es privado**: su token no puede vivir en el navegador, así que la aplicación llama
+acá y esta función —que corre del lado del servidor— es la única que lo tiene.
+
+## Desplegar
+
+Los dos secretos primero. **No van al repositorio ni a `.env` del cliente.**
+
+```bash
+supabase secrets set ZAHA_API_URL=https://zaha-cdss-<space>.hf.space
+supabase secrets set ZAHA_API_TOKEN=<token de lectura de Hugging Face>
+supabase functions deploy prediccion
+```
+
+El token es de la cuenta `Zaha-CDSS` y le alcanza con permiso de **lectura** sobre el
+Space: esta función sólo consulta.
+
+## Usar
+
+```bash
+curl -X POST "$SUPABASE_URL/functions/v1/prediccion" \
+  -H "Authorization: Bearer $JWT_DEL_USUARIO" \
+  -H "Content-Type: application/json" \
+  -d '{"patient_id": "<uuid>"}'
+```
+
+`sensibilidad_objetivo` es opcional (`0.5`, `0.6`, `0.7`, `0.8`).
+
+## Qué devuelve
+
+Siempre **200**, con un campo `estado`:
+
+| `estado` | Qué pasó | Qué hace la interfaz |
+|---|---|---|
+| `ok` | Hay estimación en `prediccion` | Mostrarla, separada del puntaje NEWS2 |
+| `dormido` | El Space está despertando (503/504, o más de 8 s) | Mostrar sólo NEWS2 |
+| `caido` | El motor no está disponible | Mostrar sólo NEWS2 |
+| `sin_tomas` | El paciente no tiene mediciones vigentes | Mostrar sólo NEWS2 |
+
+Que los tres últimos sean 200 y no un error es deliberado: **para la aplicación, que no
+haya estimación no es una falla**. El puntaje NEWS2 lo calcula un trigger de la base y
+nunca dependió de este servicio (ADR-004). Un 500 haría que la pantalla pareciera rota por
+algo que es opcional. Es SCRUM-65 visto desde este lado.
+
+## Tres decisiones que conviene conocer antes de tocar esto
+
+**No se usa la `service_role` key.** La base se consulta con el JWT de quien llama, así
+que RLS se aplica igual que en el navegador. Con la `service_role` esta función sería un
+agujero para leer la historia clínica de cualquier paciente.
+
+**Se manda la última toma vigente, no el historial.** El título del issue dice "historial"
+porque se escribió cuando la planificación daba por hecho un modelo temporal. El modelo
+desplegado es de corte transversal —una fila por paciente— y la API acepta **una**
+observación. La parte temporal sigue colgando de SCRUM-57.
+
+**ACVPU se colapsa al binario `confusion` hacia el lado seguro.** El modelo sólo conoce
+"confuso sí/no", pero ACVPU tiene cinco niveles y V, P y U son *peores* que C. Todo lo que
+no sea `A` cuenta como `1`: mapear un paciente que no responde a `0` le diría al modelo
+que está alerta. El costo es que el modelo no distingue confusión de coma, y eso es un
+límite de la cohorte de entrenamiento.
+
+## Probar el mapeo
+
+La lógica pura está separada en `mapeo.ts` justamente para poder probarla sin Deno:
+
+```bash
+node --test supabase/functions/prediccion/mapeo.test.ts
+```
