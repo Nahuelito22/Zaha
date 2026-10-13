@@ -200,6 +200,33 @@ def test_el_pipeline_declarado_coincide_con_el_modelo_elegido():
     assert "StandardScaler" in meta["pipeline"]
 
 
+def test_los_metadatos_traen_los_coeficientes_para_explicar():
+    """
+    SCRUM-66 se apoya en que el sidecar lleve con qué descomponer el logit. Sin esto la
+    API no puede explicar nada: el grafo ONNX da la probabilidad, no de dónde salió.
+    """
+    df = _cohorte()
+    meta = _meta(df)
+    bloque = meta["explicabilidad"]
+
+    assert bloque is not None
+    assert bloque["exacta"] is True
+    for clave in ("intercepto", "coeficientes", "escalado_media", "escalado_escala"):
+        assert clave in bloque, clave
+    assert list(bloque["coeficientes"]) == meta["features_en_orden"]
+
+
+def test_sin_modelo_lineal_la_explicabilidad_es_nula_y_no_inventada():
+    """
+    Si la CV anidada pasara a elegir XGBoost, la descomposición exacta deja de existir.
+    Tiene que aparecer `null`, no coeficientes de otro modelo: la API lo detecta y
+    responde sin explicación en vez de mostrar una falsa.
+    """
+    df = _cohorte()
+    arbol = baseline.entrenar(df, modelo="xgb_1")
+    assert exportar.explicabilidad(arbol, baseline.FEATURES) is None
+
+
 PRUEBAS = [
     test_onnx_y_sklearn_dan_la_misma_probabilidad,
     test_ninguna_decision_cambia_de_lado,
@@ -212,6 +239,8 @@ PRUEBAS = [
     test_los_metadatos_declaran_que_la_reduccion_no_esta_demostrada,
     test_los_metadatos_son_json_serializable,
     test_el_pipeline_declarado_coincide_con_el_modelo_elegido,
+    test_los_metadatos_traen_los_coeficientes_para_explicar,
+    test_sin_modelo_lineal_la_explicabilidad_es_nula_y_no_inventada,
 ]
 
 

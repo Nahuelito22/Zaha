@@ -240,6 +240,93 @@ def test_la_api_no_calcula_news2():
     assert not [r for r in rutas if "news" in r.lower()]
 
 
+# -- explicabilidad (SCRUM-66) ---------------------------------------------------------
+
+
+def test_las_contribuciones_reconstruyen_la_probabilidad_servida():
+    """
+    La prueba central de SCRUM-66.
+
+    Una explicación que no reproduce la probabilidad del modelo servido no describe a ese
+    modelo. Mostrarla sería peor que no explicar nada: señalaría el parámetro equivocado
+    en una alerta clínica. Acá se verifica la identidad completa, de los coeficientes del
+    sidecar hasta la salida del grafo ONNX.
+    """
+    m = cargador.Modelo(MODELOS)
+    for observacion in (OBSERVACION, {**OBSERVACION, "confusion": 1, "edad": 31, "spo2": 99}):
+        explicacion = m.explicar(observacion)
+        servida = m.predecir(observacion, 0.70).probabilidad
+
+        assert explicacion.reconstruye_la_probabilidad
+        assert abs(explicacion.probabilidad_reconstruida - servida) < 1e-5
+
+        suma = explicacion.intercepto + sum(
+            c.contribucion for c in explicacion.contribuciones
+        )
+        assert abs(suma - explicacion.logit) < 1e-9
+
+
+def test_las_contribuciones_vienen_ordenadas_por_influencia():
+    m = cargador.Modelo(MODELOS)
+    magnitudes = [abs(c.contribucion) for c in m.explicar(OBSERVACION).contribuciones]
+    assert magnitudes == sorted(magnitudes, reverse=True)
+
+
+def test_estan_los_siete_parametros_y_ninguno_mas():
+    m = cargador.Modelo(MODELOS)
+    explicados = {c.parametro for c in m.explicar(OBSERVACION).contribuciones}
+    assert explicados == set(m.features)
+
+
+def test_el_signo_de_la_contribucion_sigue_a_la_clinica():
+    """
+    Empeorar un parámetro tiene que empujar hacia la alerta, no alejarse de ella.
+
+    No se verifica el valor sino la dirección: si un modelo reentrenado invirtiera el
+    signo de la saturación, la interfaz explicaría que desaturar protege al paciente.
+    """
+    m = cargador.Modelo(MODELOS)
+
+    peor = {**OBSERVACION, "spo2": 88}
+    mejor = {**OBSERVACION, "spo2": 99}
+    assert m.predecir(peor, 0.70).probabilidad > m.predecir(mejor, 0.70).probabilidad
+
+    taquipneico = {**OBSERVACION, "frecuencia_respiratoria": 32}
+    normal = {**OBSERVACION, "frecuencia_respiratoria": 16}
+    assert (
+        m.predecir(taquipneico, 0.70).probabilidad
+        > m.predecir(normal, 0.70).probabilidad
+    )
+
+
+def test_sin_bloque_de_explicabilidad_no_se_inventa_una():
+    """
+    Si el modelo dejara de ser lineal, la descomposición exacta no existe. La respuesta
+    tiene que venir sin explicación, no con una aproximada disfrazada de exacta.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        directorio = _copia_de_los_modelos(Path(tmp))
+        ruta = directorio / cargador.NOMBRE_METADATOS
+        meta = json.loads(ruta.read_text(encoding="utf-8"))
+        meta["explicabilidad"] = None
+        ruta.write_text(json.dumps(meta), encoding="utf-8")
+
+        m = cargador.Modelo(directorio)
+        assert m.explicar(OBSERVACION) is None
+        assert m.predecir(OBSERVACION, 0.70).explicacion is None
+
+
+def test_la_prediccion_http_trae_la_explicacion():
+    with _cliente() as c:
+        cuerpo = c.post("/prediccion", json={"observacion": OBSERVACION}).json()
+
+    explicacion = cuerpo["explicacion"]
+    assert explicacion["exacta"] is True
+    assert explicacion["reconstruye_la_probabilidad"] is True
+    assert len(explicacion["contribuciones"]) == 7
+    assert explicacion["contribuciones"][0]["direccion"] in {"aumenta", "reduce", "neutro"}
+
+
 def test_el_modelo_expone_su_sidecar_completo():
     with _cliente() as c:
         meta = c.get("/modelo").json()
@@ -265,6 +352,12 @@ PRUEBAS = [
     test_la_advertencia_sobre_la_evidencia_viaja_en_cada_prediccion,
     test_la_api_no_calcula_news2,
     test_el_modelo_expone_su_sidecar_completo,
+    test_las_contribuciones_reconstruyen_la_probabilidad_servida,
+    test_las_contribuciones_vienen_ordenadas_por_influencia,
+    test_estan_los_siete_parametros_y_ninguno_mas,
+    test_el_signo_de_la_contribucion_sigue_a_la_clinica,
+    test_sin_bloque_de_explicabilidad_no_se_inventa_una,
+    test_la_prediccion_http_trae_la_explicacion,
 ]
 
 

@@ -11,6 +11,48 @@
     "confusion",
     "edad"
   ],
+  "explicabilidad": {
+    "forma": "logit(p) = intercepto + suma(coef_j * (x_j - media_j) / escala_j)",
+    "exacta": true,
+    "nota": "Descomposicion algebraica del modelo servido, no una aproximacion local. Las contribuciones estan en log-odds y suman exactamente el logit.",
+    "intercepto": -0.588653434791285,
+    "coeficientes": {
+      "frecuencia_respiratoria": 0.3576555644622765,
+      "spo2": -0.1296621480051375,
+      "temperatura": 0.2629380072613071,
+      "presion_sistolica": -0.2141703605565433,
+      "frecuencia_cardiaca": 0.29085892762908316,
+      "confusion": 0.19951972075167462,
+      "edad": 0.9245555682050849
+    },
+    "escalado_media": {
+      "frecuencia_respiratoria": 19.806153846153848,
+      "spo2": 96.46230769230769,
+      "temperatura": 36.57953839991643,
+      "presion_sistolica": 141.21076923076924,
+      "frecuencia_cardiaca": 85.72461538461539,
+      "confusion": 0.033846153846153845,
+      "edad": 64.73230769230769
+    },
+    "escalado_escala": {
+      "frecuencia_respiratoria": 4.468277139090186,
+      "spo2": 3.600550500315951,
+      "temperatura": 0.6960413940864979,
+      "presion_sistolica": 30.128012128132507,
+      "frecuencia_cardiaca": 21.21616604797266,
+      "confusion": 0.1808330492912629,
+      "edad": 17.974572704387867
+    },
+    "imputacion_media": {
+      "frecuencia_respiratoria": 19.806153846153848,
+      "spo2": 96.46230769230769,
+      "temperatura": 36.57953839991643,
+      "presion_sistolica": 141.21076923076924,
+      "frecuencia_cardiaca": 85.72461538461539,
+      "confusion": 0.033846153846153845,
+      "edad": 64.73230769230769
+    }
+  },
   "features_excluidas": {
     "cuales": [
       "MR-proADM",
@@ -68,5 +110,5 @@
     "aceptable": true
   },
   "advertencia": "La reduccion de alertas contra NEWS2 NO esta demostrada con esta cohorte: +29,8 % con IC95 [-8,5 %, +44,7 %], que incluye el cero. Ver SCRUM-58.",
-  "generado": "2026-09-30"
+  "generado": "2026-10-13"
 }

@@ -76,10 +76,46 @@ class PuntoDeOperacion:
 
 
 @dataclass(frozen=True)
+class Contribucion:
+    """Cuánto empujó un parámetro, en log-odds, y hacia dónde."""
+
+    parametro: str
+    valor: float
+    contribucion: float
+
+    @property
+    def direccion(self) -> str:
+        if self.contribucion > 0:
+            return "aumenta"
+        if self.contribucion < 0:
+            return "reduce"
+        return "neutro"
+
+
+@dataclass(frozen=True)
+class Explicacion:
+    """
+    La descomposición exacta del logit (SCRUM-66).
+
+    `contribuciones` viene ordenada por magnitud: lo primero de la lista es lo que más
+    empujó la predicción. `reconstruye_la_probabilidad` es la verificación de que esta
+    explicación describe el modelo que se está sirviendo y no una aproximación paralela —
+    si diera False, la explicación estaría mintiendo y no hay que mostrarla.
+    """
+
+    intercepto: float
+    contribuciones: list[Contribucion]
+    logit: float
+    probabilidad_reconstruida: float
+    reconstruye_la_probabilidad: bool
+
+
+@dataclass(frozen=True)
 class Prediccion:
     probabilidad: float
     alerta: bool
     punto: PuntoDeOperacion
+    explicacion: Explicacion | None
 
 
 def _probabilidades(sesion: ort.InferenceSession, X: np.ndarray) -> np.ndarray:
@@ -105,13 +141,16 @@ class Modelo:
         for ruta in (ruta_onnx, ruta_meta):
             if not ruta.exists():
                 raise ContratoRoto(
-                    f"falta {ruta.name} en {directorio}. El artefacto no se versiona: "
-                    f"se regenera con `python -m src.models.exportar`."
+                    f"falta {ruta.name} en {directorio}. Los dos archivos del par estan "
+                    f"versionados; si falta alguno se regeneran juntos con "
+                    f"`python -m src.models.exportar`."
                 )
 
         self.ruta_onnx = ruta_onnx
         self.metadatos: dict = json.loads(ruta_meta.read_text(encoding="utf-8"))
         self.features: list[str] = list(self.metadatos["features_en_orden"])
+        # Ausente o `null` si el modelo dejó de ser lineal: ver `explicar`.
+        self.explicabilidad: dict | None = self.metadatos.get("explicabilidad")
 
         self.sesion = ort.InferenceSession(
             str(ruta_onnx), providers=["CPUExecutionProvider"]
@@ -178,6 +217,52 @@ class Modelo:
                 f"sensibilidad {sensibilidad} no esta calibrada; disponibles: {disponibles}"
             ) from None
 
+    def explicar(self, valores: dict[str, float]) -> Explicacion | None:
+        """
+        Descompone el logit parámetro por parámetro (SCRUM-66).
+
+        Devuelve `None` cuando el sidecar no trae el bloque de explicabilidad, que es lo
+        que pasa si el modelo deja de ser lineal. Antes de mostrar nada hay que mirar
+        `reconstruye_la_probabilidad`: una explicación que no reproduce la probabilidad
+        servida no describe a este modelo, y una explicación equivocada de una alerta
+        clínica manda a enfermería a mirar el parámetro que no es.
+        """
+        bloque = self.explicabilidad
+        if bloque is None:
+            return None
+
+        intercepto = float(bloque["intercepto"])
+        coeficientes = bloque["coeficientes"]
+        medias = bloque["escalado_media"]
+        escalas = bloque["escalado_escala"]
+
+        contribuciones = []
+        for f in self.features:
+            x = float(valores[f])
+            escala = float(escalas[f]) or 1.0
+            z = (x - float(medias[f])) / escala
+            contribuciones.append(
+                Contribucion(parametro=f, valor=x, contribucion=float(coeficientes[f]) * z)
+            )
+
+        contribuciones.sort(key=lambda c: abs(c.contribucion), reverse=True)
+
+        logit = intercepto + sum(c.contribucion for c in contribuciones)
+        reconstruida = float(1.0 / (1.0 + np.exp(-logit)))
+
+        X = np.array([[float(valores[f]) for f in self.features]], dtype=float)
+        servida = float(_probabilidades(self.sesion, X)[0])
+
+        return Explicacion(
+            intercepto=intercepto,
+            contribuciones=contribuciones,
+            logit=float(logit),
+            probabilidad_reconstruida=reconstruida,
+            # La tolerancia es la misma que la de la paridad ONNX: float32 tiene ~7
+            # digitos y el grafo corre en float32.
+            reconstruye_la_probabilidad=bool(abs(reconstruida - servida) < 1e-5),
+        )
+
     def predecir(self, valores: dict[str, float], sensibilidad: float) -> Prediccion:
         """
         `valores` se ordena según el sidecar, nunca según el orden en que vino el JSON.
@@ -194,4 +279,5 @@ class Modelo:
             probabilidad=probabilidad,
             alerta=probabilidad >= punto.umbral,
             punto=punto,
+            explicacion=self.explicar(valores),
         )
