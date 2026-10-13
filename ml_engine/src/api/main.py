@@ -1,7 +1,221 @@
-from fastapi import FastAPI
+"""
+API de inferencia de Zaha (SCRUM-62).
 
-app = FastAPI(title="Zaha ML Engine API")
+QUÉ ES ESTE SERVICIO DENTRO DEL SISTEMA
+Es un sidecar opcional. El puntaje NEWS2 se calcula en la base de datos y no pasa por
+acá; este servicio sólo agrega la estimación del modelo. Si el proceso está caído, la
+aplicación clínica pierde la predicción y conserva la escala — esa es la degradación
+elegante de `SCRUM-65`, y es la razón por la que la API no tiene ningún endpoint que
+calcule NEWS2: tenerlo invitaría a depender de él.
 
-@app.get("/")
-def health_check():
-    return {"status": "ok", "message": "Zaha ML Engine is running"}
+TRES DECISIONES QUE SE VEN EN EL CONTRATO
+
+1. **El punto de operación viaja en cada respuesta.** El sidecar del modelo dice que
+   elegir el umbral es una decisión clínica, no técnica: depende de cuántas alertas por
+   turno tolera la guardia. Así que la respuesta nunca trae una alerta suelta; trae la
+   alerta junto a la sensibilidad objetivo, el umbral y la tasa de alertas que hay que
+   esperar. Y declara si esa sensibilidad la eligió quien llamó o si quedó el valor por
+   defecto, para que "nadie la eligió" no se confunda con "alguien la eligió así".
+
+2. **Los rangos fisiológicos se validan acá y son los mismos de la tubería.** Vienen de
+   `src/rangos.py`, el mismo diccionario que usa la ingesta y que replican los CHECK de
+   la base. Una SpO₂ de 10 % no es un paciente grave: es un error de registro, y el
+   modelo le pondría una probabilidad alta con total seguridad.
+
+3. **La advertencia sobre la evidencia viaja con el modelo.** `GET /modelo` devuelve el
+   sidecar completo, con el intervalo de confianza que incluye el cero. Quien integre
+   este servicio tiene que poder leer, sin buscarlo, que la reducción de alertas todavía
+   no está demostrada.
+
+Para levantarlo:
+
+    cd ml_engine && .venv/Scripts/python -m uvicorn src.api.main:app --reload
+"""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from typing import Annotated, Literal
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+
+from .. import rangos
+from . import modelo as cargador
+
+SENSIBILIDAD_POR_DEFECTO = 0.70
+
+_estado: dict[str, object] = {"modelo": None, "error": None}
+
+
+def obtener_modelo() -> cargador.Modelo:
+    m = _estado.get("modelo")
+    if m is None:
+        raise HTTPException(
+            status_code=503,
+            detail=f"el modelo no esta cargado: {_estado.get('error')}",
+        )
+    return m  # type: ignore[return-value]
+
+
+@asynccontextmanager
+async def ciclo_de_vida(app: FastAPI):
+    """
+    El artefacto se carga una vez al arrancar, no por pedido.
+
+    Si falla, el proceso **igual levanta** y `/salud` responde `degradado`. Es a
+    propósito: así la causa queda visible en el endpoint de salud en vez de en un
+    contenedor que reinicia en bucle sin decir por qué.
+    """
+    try:
+        _estado["modelo"] = cargador.Modelo()
+        _estado["error"] = None
+    except Exception as exc:  # noqa: BLE001 — se reporta por /salud
+        _estado["modelo"] = None
+        _estado["error"] = f"{type(exc).__name__}: {exc}"
+    yield
+    _estado["modelo"] = None
+
+
+app = FastAPI(
+    title="Zaha ML Engine API",
+    description=(
+        "Estimacion de deterioro clinico. NO calcula NEWS2: la escala es deterministica "
+        "y se calcula en la base de datos."
+    ),
+    version="1.0.0",
+    lifespan=ciclo_de_vida,
+)
+
+
+# -- esquemas ----------------------------------------------------------------------
+
+
+def _rango(parametro: str) -> tuple[float, float]:
+    return rangos.RANGOS_PLAUSIBLES[parametro]
+
+
+class Observacion(BaseModel):
+    """
+    Una toma de signos vitales al pie de la cama.
+
+    Los límites salen de `src/rangos.py`. No se aceptan valores fuera de rango ni se
+    imputan: una medición imposible es un error de registro y tiene que volver como 422,
+    no como una probabilidad.
+    """
+
+    frecuencia_respiratoria: Annotated[
+        float, Field(ge=_rango("frecuencia_respiratoria")[0], le=_rango("frecuencia_respiratoria")[1])
+    ]
+    spo2: Annotated[float, Field(ge=_rango("spo2")[0], le=_rango("spo2")[1])]
+    temperatura: Annotated[
+        float, Field(ge=_rango("temperatura")[0], le=_rango("temperatura")[1])
+    ]
+    presion_sistolica: Annotated[
+        float, Field(ge=_rango("presion_sistolica")[0], le=_rango("presion_sistolica")[1])
+    ]
+    frecuencia_cardiaca: Annotated[
+        float, Field(ge=_rango("frecuencia_cardiaca")[0], le=_rango("frecuencia_cardiaca")[1])
+    ]
+    confusion: Annotated[
+        int,
+        Field(
+            ge=0,
+            le=1,
+            description=(
+                "La 'C' de NEWS2: confusion NUEVA, no un deterioro cronico previo. "
+                "1 = confusion nueva."
+            ),
+        ),
+    ]
+    edad: Annotated[float, Field(ge=0, le=120)]
+
+
+class PedidoDePrediccion(BaseModel):
+    observacion: Observacion
+    sensibilidad_objetivo: float | None = Field(
+        default=None,
+        description=(
+            "Punto de operacion. Si se omite se usa 0.70 y la respuesta lo declara como "
+            "valor por defecto. Solo se aceptan los puntos calibrados."
+        ),
+    )
+
+
+class PuntoDeOperacionRespuesta(BaseModel):
+    sensibilidad_objetivo: float
+    umbral: float
+    tasa_de_alertas_esperada: float | None
+    elegido_por: Literal["cliente", "valor_por_defecto"]
+
+
+class RespuestaDePrediccion(BaseModel):
+    probabilidad: float
+    alerta: bool
+    punto_de_operacion: PuntoDeOperacionRespuesta
+    es_estimacion: Literal[True] = True
+    advertencia: str
+
+
+class RespuestaDeSalud(BaseModel):
+    estado: Literal["ok", "degradado"]
+    modelo_cargado: bool
+    detalle: str | None = None
+
+
+# -- endpoints ---------------------------------------------------------------------
+
+
+@app.get("/", response_model=RespuestaDeSalud, tags=["salud"])
+@app.get("/salud", response_model=RespuestaDeSalud, tags=["salud"])
+def salud() -> RespuestaDeSalud:
+    """
+    Responde 200 aunque el modelo no haya cargado.
+
+    El cliente decide: `estado: degradado` significa "segui mostrando NEWS2 y no esperes
+    prediccion". Un 503 acá haria que un orquestador reiniciara el contenedor en bucle
+    por un problema que es del artefacto, no del proceso.
+    """
+    cargado = _estado.get("modelo") is not None
+    return RespuestaDeSalud(
+        estado="ok" if cargado else "degradado",
+        modelo_cargado=cargado,
+        detalle=None if cargado else str(_estado.get("error")),
+    )
+
+
+@app.get("/modelo", tags=["modelo"])
+def describir_modelo() -> dict:
+    """El sidecar completo: features, cohorte de entrenamiento, curva de umbrales y la advertencia."""
+    return obtener_modelo().metadatos
+
+
+@app.post("/prediccion", response_model=RespuestaDePrediccion, tags=["modelo"])
+def predecir(pedido: PedidoDePrediccion) -> RespuestaDePrediccion:
+    m = obtener_modelo()
+
+    elegido_por: Literal["cliente", "valor_por_defecto"] = (
+        "cliente" if pedido.sensibilidad_objetivo is not None else "valor_por_defecto"
+    )
+    sensibilidad = (
+        pedido.sensibilidad_objetivo
+        if pedido.sensibilidad_objetivo is not None
+        else SENSIBILIDAD_POR_DEFECTO
+    )
+
+    try:
+        resultado = m.predecir(pedido.observacion.model_dump(), sensibilidad)
+    except cargador.PuntoNoCalibrado as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    return RespuestaDePrediccion(
+        probabilidad=round(resultado.probabilidad, 6),
+        alerta=resultado.alerta,
+        punto_de_operacion=PuntoDeOperacionRespuesta(
+            sensibilidad_objetivo=resultado.punto.sensibilidad_objetivo,
+            umbral=resultado.punto.umbral,
+            tasa_de_alertas_esperada=resultado.punto.tasa_de_alertas_esperada,
+            elegido_por=elegido_por,
+        ),
+        advertencia=str(m.metadatos.get("advertencia", "")),
+    )

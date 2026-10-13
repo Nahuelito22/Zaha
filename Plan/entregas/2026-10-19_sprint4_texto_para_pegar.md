@@ -24,14 +24,22 @@ Las cuatro de resultados ya están generadas en
 `ml_engine/data/interim/figuras/`. Hay que copiarlas a la carpeta de la entrega y subirlas
 a Drive.
 
-| Hueco | Archivo | De dónde sale |
+**Las seis están listas** en `Desktop\Zaha_Entrega_19-10\`. Solo falta subirlas a Drive
+e insertarlas desde *Insertar → Imagen → Drive*.
+
+| Hueco | Archivo | Generado por |
 |---|---|---|
-| IMAGEN 20 | `20_jira_sprint4.jpg` | **Capturar.** Vista de issues de Jira con la columna *Story point estimate*, filtrando el Sprint 4 |
-| IMAGEN 21 | `21_jira_bloqueadas.jpg` | **Capturar.** Las tareas abiertas, mostrando las dos bloqueadas por PhysioNet |
-| IMAGEN 22 | `07_curva_operacion_news2.png` | ya generada |
-| IMAGEN 23 | `08_curvas_superpuestas.png` | ya generada ← **la figura central de la entrega** |
-| IMAGEN 24 | `08_intervalo_reduccion.png` | ya generada |
-| IMAGEN 25 | `burndown_sprint4.png` | **Regenerar** con `scripts/burndown.py` |
+| IMAGEN 20 | `20_jira_sprint4.png` | `scripts/figura_sprint4.py` |
+| IMAGEN 21 | `21_jira_bloqueadas.png` | `scripts/figura_sprint4.py` |
+| IMAGEN 22 | `22_curva_operacion_news2.png` | notebook 07 |
+| IMAGEN 23 | `23_modelo_vs_news2.png` | notebook 08 ← **la figura central de la entrega** |
+| IMAGEN 24 | `24_intervalo_reduccion.png` | notebook 08 |
+| IMAGEN 25 | `25_burndown_sprint4.png` | `scripts/burndown.py` |
+
+> **Las figuras 20 y 21 son tablas compuestas, no capturas de pantalla**, y su pie lo
+> declara. La vista de Jira no entra completa en una captura: el viewport del navegador
+> queda fijo en 633 px de alto y la tabla tiene scroll propio, así que de 15 ítems sólo
+> entran 8. Los datos salen de `sprint = 6` leídos por la API el 01/10/2026.
 
 ---
 
@@ -67,25 +75,25 @@ El sprint cerró con nueve de los quince ítems completos. De los seis restantes
 
 Evidencia de gestión en Jira
 
-[ IMAGEN 20 — insertar aquí: 20_jira_sprint4.jpg ]
+[ IMAGEN 20 — insertar aquí: 20_jira_sprint4.png ]
 
-Figura 20. Estado del Sprint 4. Los quince ítems con su responsable, su prioridad, su estimación en puntos de historia y su estado. Cincuenta y ocho de los setenta y cinco puntos comprometidos quedaron completos.
+Figura 20. Estado del Sprint 4. Los quince ítems registrados en el tablero, con su responsable, su prioridad, su estimación en puntos de historia y su estado. Cincuenta y ocho de los setenta y cinco puntos comprometidos quedaron completos. La tabla se compuso a partir de los datos del tablero porque la vista del gestor no permite mostrar los quince ítems en una sola pantalla.
 
-[ IMAGEN 21 — insertar aquí: 21_jira_bloqueadas.jpg ]
+[ IMAGEN 21 — insertar aquí: 21_jira_bloqueadas.png ]
 
-Figura 21. Trabajo bloqueado por una dependencia externa. Las tareas que no pudieron completarse porque esperan la acreditación para acceder al conjunto de datos completo. Se mantienen visibles y con su bloqueo declarado en lugar de ocultarlas, porque un tablero que no muestra lo que está trabado deja de ser útil para la gestión.
+Figura 21. El trabajo no completado, con el motivo de cada caso. Ninguno de los seis ítems quedó abierto por falta de avance: tres dependen de la acreditación externa, dos son historias de usuario que se cierran cuando terminan sus tareas hijas, y uno corresponde a trabajo de interoperabilidad ajeno al objetivo del sprint. Se mantienen visibles y con su motivo declarado en lugar de ocultarlos, porque un tablero que no muestra lo que está trabado deja de ser útil para la gestión.
 
 Evidencia del incremento funcionando
 
-[ IMAGEN 22 — insertar aquí: 07_curva_operacion_news2.png ]
+[ IMAGEN 22 — insertar aquí: 22_curva_operacion_news2.png ]
 
 Figura 22. Comportamiento de la escala NEWS2 en guardia. Para cada umbral posible, cuántas alertas genera y qué proporción de los desenlaces graves detecta. El punto marcado es la regla que la aplicación tiene efectivamente desplegada. Es la primera medición propia del rendimiento de la escala en este entorno, hecha con el mismo motor de cálculo que usa el sistema.
 
-[ IMAGEN 23 — insertar aquí: 08_curvas_superpuestas.png ]
+[ IMAGEN 23 — insertar aquí: 23_modelo_vs_news2.png ]
 
 Figura 23. El modelo frente a la escala. Las dos curvas sobre el mismo par de ejes. Hacia arriba y hacia la izquierda está lo deseable: detectar más molestando menos. El modelo queda por encima en la mayor parte del recorrido, pero las curvas se cruzan en un tramo estrecho, y ese cruce cae justo donde opera hoy el sistema. Es la razón por la que la comparación se hace sobre un rango y no sobre un punto.
 
-[ IMAGEN 24 — insertar aquí: 08_intervalo_reduccion.png ]
+[ IMAGEN 24 — insertar aquí: 24_intervalo_reduccion.png ]
 
 Figura 24. Reducción de la tasa de alertas con su intervalo de confianza. El valor estimado es una reducción cercana al treinta por ciento, pero el intervalo del noventa y cinco por ciento incluye el cero. El resultado es consistente con la hipótesis y no alcanza para darla por demostrada.
 
@@ -105,7 +113,7 @@ Sprint 4, 75 puntos comprometidos y 58 completados sobre 15 ítems. Los 17 punto
 
 Burndown Chart
 
-[ IMAGEN 25 — insertar aquí: burndown_sprint4.png ]
+[ IMAGEN 25 — insertar aquí: 25_burndown_sprint4.png ]
 
 Figura 25. Evolución del Sprint 4. El trabajo restante día por día contra el avance ideal. A diferencia de los tres sprints anteriores, la curva no baja a cero: los puntos que quedan arriba son los que dependen de la acreditación externa.
 
@@ -119,7 +127,9 @@ El modelo funciona. Discrimina mejor que la escala de referencia y, en el rango 
 
 Fue tentador no mirar ese intervalo. Es el tipo de verificación que, si sale mal, obliga a reescribir la conclusión que uno ya tenía redactada. Hacerla igual es lo que separa un resultado defendible de uno que se cae en la primera pregunta de la mesa.
 
-Lo valioso es que el límite está identificado y es cuantificable. No es que el modelo sea insuficiente ni que falte ajustarlo: es que la cohorte disponible tiene pocos eventos. Una simulación sobre los propios datos indica que con aproximadamente el doble de la muestra actual el intervalo dejaría de incluir el cero. El conjunto de datos completo que esperamos tiene varios órdenes de magnitud más casos, de modo que la acreditación pendiente dejó de ser un trámite administrativo para convertirse en la condición que separa una afirmación consistente de una demostrada.
+Lo valioso es que el límite está identificado y es cuantificable. No es que el modelo sea insuficiente ni que falte ajustarlo: es que la cohorte disponible tiene pocos eventos. Una simulación sobre los propios datos indica que con aproximadamente el doble de la muestra actual el intervalo dejaría de incluir el cero. El conjunto de datos completo que esperamos tiene varios órdenes de magnitud más casos, de modo que el acceso a esos datos dejó de ser un trámite administrativo para convertirse en la condición que separa una afirmación consistente de una demostrada.
+
+Ese acceso se denegó. La solicitud de credencial ante PhysioNet fue rechazada el 4 de octubre, después de una primera presentación que había quedado sin respuesta durante tres semanas por un error en la dirección de correo del referente académico. La consecuencia sobre el alcance está acotada: los ítems que dependen de esa fuente son cuatro, y ninguno de ellos pertenece a los dos sprints que restan. El relevamiento de alternativas ya identificó cohortes de guardia de acceso abierto con dos órdenes de magnitud más desenlaces registrados que la que usamos hoy, y se incorporarán como validación externa en la próxima iteración. Queda asentado igual como el riesgo peor gestionado del proyecto: la planificación apoyó un resultado central en un permiso de terceros sin preparar una alternativa de antemano, y recién se la buscó cuando el permiso faltó.
 
 Los tres hallazgos metodológicos del sprint comparten una forma. En los tres casos, la manera intuitiva de medir —el umbral de manual en lugar de la regla real, un punto de operación en lugar de un rango, el modelo más complejo en lugar del que la evaluación elija— habría producido un número más favorable y menos cierto. Es la misma idea que viene apareciendo desde el segundo sprint, aplicada ahora a la medición: el problema no es que algo esté mal, es que parezca estar bien.
 
@@ -131,9 +141,10 @@ El próximo sprint se corre del modelado a la integración: exponer el modelo co
 
 ## Lo que hay que decidir antes de pegar
 
-1. **`SCRUM-82` no tiene responsable asignado.** Se nota en la captura del tablero.
-2. **El burndown del Sprint 4 hay que generarlo.** No baja a cero: queda en 17 puntos, con
-   la misma nota al pie que llevó el del Sprint 3.
+1. ~~`SCRUM-82` sin responsable~~ → asignado a Gustavo García. Además **no estaba en el
+   sprint**: la vista decía *14 de 15* hasta que se lo agregó, así que el tablero y este
+   texto se habrían contradicho en la entrega.
+2. ~~Generar el burndown~~ → hecho. No baja a cero: queda en 17 puntos, con nota al pie.
 3. **Las fechas del sprint** (6 al 19 de octubre) siguen la secuencia de los recuadros. El
    trabajo real se hizo entre el 21 y el 30 de septiembre, adelantado como en los sprints
    anteriores; el texto no lo menciona porque las tres entregas previas tampoco lo hacen.

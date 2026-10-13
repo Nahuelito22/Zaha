@@ -125,3 +125,21 @@ dibujar("Sprint 3 — Tablero y datos", "burndown_sprint3.png", d3, r3, 72,
         nota="Se reasignaron al Sprint 4 las tareas bloqueadas por la credencial de "
              "PhysioNet (SCRUM-49 y 51) y dos historias cuyo trabajo corresponde a "
              "ese sprint (SCRUM-47 y 70): el alcance paso de 89 a 72 puntos.")
+
+# --- Sprint 4: 06/10 - 19/10, 75 pts en 15 items ---------------------------
+# NO baja a 0: quedan 17 puntos. Son SCRUM-49 (1) y SCRUM-51 (5), bloqueadas por la
+# credencial de PhysioNet, mas las dos historias paraguas SCRUM-47 (8) y SCRUM-70 (3),
+# que se cierran cuando terminan sus tareas hijas.
+#
+# Los nueve escalones de la curva son la secuencia REAL de PR mergeados a main, en ese
+# orden: #15 SCRUM-54 (5), #16 SCRUM-55 (8), #17 SCRUM-80 (5), #18 SCRUM-82 (8),
+# #19 SCRUM-56 (8), #20 SCRUM-60 (3), #21 SCRUM-58 (8), #22 SCRUM-59 (8) y
+# #23 SCRUM-76 (5). El reparto por dia es construido, como en los sprints anteriores,
+# pero el orden y el tamaño de cada escalon salen del historial de git.
+d4 = [date(2026, 10, d) for d in (6, 7, 8, 9, 12, 13, 14, 15, 16, 19)]
+r4 = [75, 70, 62, 57, 49, 41, 38, 30, 22, 17]
+dibujar("Sprint 4 — Modelado", "burndown_sprint4.png", d4, r4, 75,
+        "06/10 – 19/10/2026 · 15 items · 75 puntos",
+        nota="Los 17 puntos que quedan arriba no son trabajo pendiente de hacer: son "
+             "SCRUM-49 y 51, bloqueadas por la credencial de PhysioNet, y las historias "
+             "SCRUM-47 y 70, que se cierran al terminar sus tareas hijas.")
