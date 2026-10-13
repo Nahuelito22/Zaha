@@ -6,7 +6,7 @@ colorTo: red
 sdk: docker
 app_port: 7860
 pinned: false
-license: mit
+license: apache-2.0
 short_description: Estimacion de deterioro clinico para el CDSS Zaha. No calcula NEWS2.
 ---
 
