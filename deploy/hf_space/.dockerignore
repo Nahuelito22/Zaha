@@ -1,0 +1,12 @@
+# El contenido del Space ya viene filtrado por `publicar.py`: acá sólo está lo que la API
+# necesita. Esto es una segunda red, para que un archivo suelto en la copia de trabajo no
+# termine dentro de la imagen.
+**/__pycache__
+**/*.pyc
+.git
+.venv
+*.parquet
+*.csv
+*.xls
+*.xlsx
+*.ipynb
