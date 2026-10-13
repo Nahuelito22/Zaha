@@ -39,18 +39,18 @@ import pandera.pandas as pa
 from pandera.errors import SchemaError, SchemaErrors
 from pydantic import BaseModel, Field, model_validator
 
+from .. import rangos as _rangos
+
 from ..data import news2
 
 # =============================================================================
 # Rangos de plausibilidad fisiológica — la fuente única del proyecto en Python.
 # =============================================================================
-RANGOS_PLAUSIBLES: dict[str, tuple[float, float]] = {
-    "frecuencia_respiratoria": (0, 80),
-    "spo2": (50, 100),
-    "temperatura": (25, 45),
-    "presion_sistolica": (30, 300),
-    "frecuencia_cardiaca": (0, 300),
-}
+# Reexportado desde `src/rangos.py`, que no importa nada de terceros. La API de
+# inferencia necesita estos mismos rangos y su contenedor no lleva pandera; mover el
+# diccionario allá es lo que evita tener dos copias que se desincronicen. Ver el porqué
+# completo en ese módulo.
+RANGOS_PLAUSIBLES = _rangos.RANGOS_PLAUSIBLES
 
 # Los 5 parámetros que MIMIC-IV-ED sí tiene. Los otros 2 se imputan (ADR-007).
 PARAMETROS_MEDIDOS = list(RANGOS_PLAUSIBLES)
