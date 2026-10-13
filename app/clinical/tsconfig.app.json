@@ -22,5 +22,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Las pruebas no van al bundle y usan los tipos de Node, no los de Vite.
+  // Se verifican desde tsconfig.node.json, que si los tiene.
+  "exclude": ["src/**/*.test.ts"]
 }
