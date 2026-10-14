@@ -23,9 +23,14 @@
  * entrar. Así que se manda la última toma vigente, y la parte temporal sigue colgando de
  * SCRUM-57, que depende de datos que todavía no tenemos.
  *
- * Secretos que necesita (`supabase secrets set`):
- *   ZAHA_API_URL    https://zaha-cdss-<space>.hf.space
- *   ZAHA_API_TOKEN  token de Hugging Face con acceso de lectura al Space privado
+ * Secretos que necesita:
+ *   ZAHA_API_URL    https://zaha-cdss-inferencia.hf.space/api
+ *   ZAHA_API_TOKEN  token de Hugging Face con acceso de LECTURA al Space privado
+ *
+ * **El `/api` del final no es opcional.** La API vive montada bajo `/api` dentro del
+ * servidor de Gradio del Space, porque ZeroGPU obliga a que el servidor lo levante Gradio
+ * (ver `deploy/hf_space/app.py`). Sin ese sufijo, el `fetch` de más abajo pediría
+ * `/prediccion` en la raíz y recibiría la pantalla de demostración en HTML en vez de JSON.
  */
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
