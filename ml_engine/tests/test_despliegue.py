@@ -262,6 +262,21 @@ def test_la_api_arranca_desde_el_directorio_armado():
         assert "OK" in salida.stdout
 
 
+def test_la_descripcion_corta_entra_en_el_limite_de_hugging_face():
+    """
+    Hugging Face rechaza el push si `short_description` pasa de 60 caracteres, y lo hace
+    en un hook de pre-recepcion: el error aparece recien al empujar, no al construir.
+    Ya costo un intento.
+    """
+    tarjeta = (RAIZ / "deploy" / "hf_space" / "README.md").read_text(encoding="utf-8")
+    linea = next(
+        l for l in tarjeta.splitlines() if l.startswith("short_description:")
+    )
+    descripcion = linea.split(":", 1)[1].strip()
+    assert len(descripcion) <= 60, (
+        f"son {len(descripcion)} caracteres y el limite es 60: {descripcion!r}"
+    )
+
 PRUEBAS = [
     test_el_space_lleva_todos_los_modulos_que_la_api_importa,
     test_la_api_no_arrastra_ninguna_dependencia_pesada,
@@ -274,6 +289,7 @@ PRUEBAS = [
     test_el_space_lleva_el_punto_de_entrada_y_no_el_dockerfile,
     test_la_demostracion_monta_la_api_y_no_la_reimplementa,
     test_la_tarjeta_declara_que_no_es_un_dispositivo_medico,
+    test_la_descripcion_corta_entra_en_el_limite_de_hugging_face,
     test_lo_armado_reproduce_la_estructura_que_espera_el_space,
     test_la_api_arranca_desde_el_directorio_armado,
 ]
