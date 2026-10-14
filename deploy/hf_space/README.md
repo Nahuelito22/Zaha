@@ -5,10 +5,13 @@ colorFrom: gray
 colorTo: red
 sdk: gradio
 sdk_version: 6.30.0
+# Fijada a proposito: es la version con la que se verifico el arranque del
+# Space localmente, y la misma que usa el Dockerfile de respaldo.
+python_version: '3.12'
 app_file: app.py
 pinned: false
 license: apache-2.0
-short_description: Estimacion de deterioro clinico para el CDSS Zaha. No calcula NEWS2.
+short_description: Estimacion de deterioro clinico. No calcula NEWS2.
 ---
 
 # Zaha — API de inferencia
