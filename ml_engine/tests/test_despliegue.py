@@ -37,8 +37,11 @@ PUBLICAR = RAIZ / "deploy" / "hf_space" / "publicar.py"
 
 # Lo que el contenedor de produccion NO lleva, por decision del ADR-004. Si la API llegara
 # a importar cualquiera de estos, el Space no arranca.
+# Lo que la API no debe importar. `gradio` SI esta instalado en el Space (el SDK lo
+# exige) y arrastra pandas con el, pero `src.api.main` no puede depender de ninguno de los
+# dos: la API tiene que seguir corriendo en un contenedor pelado, sin Gradio.
 PESADOS = {"pandas", "sklearn", "torch", "pandera", "xgboost", "skl2onnx", "pyarrow",
-           "polars", "matplotlib", "scipy", "xlrd", "httpx"}
+           "polars", "matplotlib", "scipy", "xlrd", "httpx", "gradio"}
 
 
 def _cargar_publicar():
@@ -169,15 +172,40 @@ def test_no_se_empaquetan_las_dependencias_de_desarrollo():
     assert "ml_engine/requirements-dev.txt" not in origenes
 
 
-def test_el_dockerfile_declara_el_puerto_que_el_space_espera():
-    publicar = _cargar_publicar()
-    dockerfile = (RAIZ / "deploy" / "hf_space" / "Dockerfile").read_text(encoding="utf-8")
+def test_la_tarjeta_y_el_punto_de_entrada_concuerdan():
+    """
+    El SDK es Gradio porque Docker Spaces paso a ser de pago. Si la tarjeta y `app.py` se
+    separan --`app_file` apuntando a otro archivo, o el puerto cambiado en uno solo-- el
+    Space construye bien y despues no levanta nada.
+    """
     tarjeta = (RAIZ / "deploy" / "hf_space" / "README.md").read_text(encoding="utf-8")
+    entrada = (RAIZ / "deploy" / "hf_space" / "app.py").read_text(encoding="utf-8")
 
-    assert "7860" in dockerfile
-    assert "app_port: 7860" in tarjeta
-    assert "sdk: docker" in tarjeta
-    del publicar
+    assert "sdk: gradio" in tarjeta
+    assert "app_file: app.py" in tarjeta
+    assert "sdk_version:" in tarjeta
+    # 7860 es el puerto que Spaces espera; uvicorn lo tiene que abrir.
+    assert "7860" in entrada
+
+
+def test_el_space_lleva_el_punto_de_entrada_y_no_el_dockerfile():
+    publicar = _cargar_publicar()
+    destinos = {d for _, d in publicar.CONTENIDO}
+    assert "app.py" in destinos
+    assert "Dockerfile" not in destinos, (
+        "el SDK es Gradio: un Dockerfile en la raiz del Space solo confunde"
+    )
+
+
+def test_la_demostracion_monta_la_api_y_no_la_reimplementa():
+    """
+    La pantalla de Gradio tiene que servir LA MISMA API, no una copia. Si alguien
+    reimplementara ahi el calculo, la demostracion y la aplicacion clinica podrian
+    divergir sin que nada falle.
+    """
+    entrada = (RAIZ / "deploy" / "hf_space" / "app.py").read_text(encoding="utf-8")
+    assert "from src.api.main import app" in entrada
+    assert "mount_gradio_app" in entrada
 
 
 def test_la_tarjeta_declara_que_no_es_un_dispositivo_medico():
@@ -194,13 +222,13 @@ def test_la_tarjeta_declara_que_no_es_un_dispositivo_medico():
 # -- el contenido armado funciona --------------------------------------------------------
 
 
-def test_lo_armado_reproduce_la_estructura_que_espera_el_dockerfile():
+def test_lo_armado_reproduce_la_estructura_que_espera_el_space():
     publicar = _cargar_publicar()
     with tempfile.TemporaryDirectory() as tmp:
         destino = Path(tmp)
         publicar.armar(destino)
 
-        for esperado in ("Dockerfile", "README.md", "requirements.txt",
+        for esperado in ("app.py", "README.md", "requirements.txt",
                          "src/__init__.py", "src/api/main.py", "src/rangos.py",
                          "models/zaha_baseline.onnx"):
             assert (destino / esperado).exists(), f"falta {esperado} en lo armado"
@@ -242,9 +270,11 @@ PRUEBAS = [
     test_el_par_del_modelo_viaja_completo,
     test_el_space_no_lleva_datos_ni_notebooks,
     test_no_se_empaquetan_las_dependencias_de_desarrollo,
-    test_el_dockerfile_declara_el_puerto_que_el_space_espera,
+    test_la_tarjeta_y_el_punto_de_entrada_concuerdan,
+    test_el_space_lleva_el_punto_de_entrada_y_no_el_dockerfile,
+    test_la_demostracion_monta_la_api_y_no_la_reimplementa,
     test_la_tarjeta_declara_que_no_es_un_dispositivo_medico,
-    test_lo_armado_reproduce_la_estructura_que_espera_el_dockerfile,
+    test_lo_armado_reproduce_la_estructura_que_espera_el_space,
     test_la_api_arranca_desde_el_directorio_armado,
 ]
 

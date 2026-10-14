@@ -199,7 +199,10 @@ class RespuestaDeSalud(BaseModel):
 # -- endpoints ---------------------------------------------------------------------
 
 
-@app.get("/", response_model=RespuestaDeSalud, tags=["salud"])
+# La salud vive SOLO en /salud. Antes estaba tambien en la raiz, y la raiz quedo
+# reservada: en el Space, `deploy/hf_space/app.py` monta ahi la pantalla de demostracion,
+# porque es lo que Hugging Face muestra en la pestaña App. Dejar un JSON de salud en la
+# raiz haria que la Space se presentara como un volcado de texto.
 @app.get("/salud", response_model=RespuestaDeSalud, tags=["salud"])
 def salud() -> RespuestaDeSalud:
     """

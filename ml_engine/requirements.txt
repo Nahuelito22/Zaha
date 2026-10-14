@@ -9,6 +9,12 @@
 # Para trabajar en notebooks y entrenar, usar requirements-dev.txt.
 # =============================================================================
 
+# El Space usa el SDK de Gradio porque Docker Spaces paso a ser de pago. Gradio monta
+# la misma app de FastAPI (ver deploy/hf_space/app.py); no la reemplaza. Arrastra mas
+# dependencias de las que esta API necesita --pandas entre ellas-- y ese es el costo de
+# no tener Docker.
+gradio~=6.30.0
+
 fastapi~=0.141.1
 uvicorn~=0.52.4
 pydantic~=2.13.4
