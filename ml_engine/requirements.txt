@@ -17,7 +17,11 @@ gradio~=6.30.0
 
 fastapi~=0.141.1
 uvicorn~=0.52.4
-pydantic~=2.13.4
+# NO SUBIR ESTE TECHO SIN MIRAR GRADIO. El Space de Hugging Face no instala solo
+# nuestro requirements.txt: le agrega `gradio[oauth,mcp]`, y el extra `mcp` exige
+# pydantic<=2.12.5. Un `~=2.13.4` aca hace que el build falle con ResolutionImpossible,
+# y el error aparece en el log de construccion del Space, no en ninguna prueba local.
+pydantic>=2.11,<2.13
 
 # Runtime de inferencia. Sin torch: el modelo viaja en ONNX.
 onnxruntime~=1.29.0

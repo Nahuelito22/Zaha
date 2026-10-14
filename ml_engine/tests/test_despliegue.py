@@ -21,6 +21,7 @@ Corre TAMBIÉN sin pytest:
 """
 import importlib.util
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -127,8 +128,11 @@ def test_la_api_no_arrastra_ninguna_dependencia_pesada():
 
 def test_los_terceros_que_la_api_usa_estan_en_requirements_de_produccion():
     requisitos = (ML_ENGINE / "requirements.txt").read_text(encoding="utf-8")
+    # El nombre es lo que viene antes de cualquier especificador de version. No alcanza
+    # con partir por `~=` y `==`: `pydantic` quedo con un rango `>=2.11,<2.13` por el
+    # conflicto con gradio[mcp], y el parser viejo lo daba por ausente.
     declarados = {
-        linea.split("~=")[0].split("==")[0].strip().lower()
+        re.split(r"[<>=!~\[;]", linea.strip(), maxsplit=1)[0].strip().lower()
         for linea in requisitos.splitlines()
         if linea.strip() and not linea.strip().startswith("#")
     }
@@ -184,8 +188,9 @@ def test_la_tarjeta_y_el_punto_de_entrada_concuerdan():
     assert "sdk: gradio" in tarjeta
     assert "app_file: app.py" in tarjeta
     assert "sdk_version:" in tarjeta
-    # 7860 es el puerto que Spaces espera; uvicorn lo tiene que abrir.
-    assert "7860" in entrada
+    # El puerto ya no se fija a mano: `demo.launch()` lo resuelve con las variables que
+    # pone el Space. Lo que si tiene que estar es la funcion que ZeroGPU exige.
+    assert "@spaces.GPU" in entrada
 
 
 def test_el_space_lleva_el_punto_de_entrada_y_no_el_dockerfile():
@@ -205,7 +210,14 @@ def test_la_demostracion_monta_la_api_y_no_la_reimplementa():
     """
     entrada = (RAIZ / "deploy" / "hf_space" / "app.py").read_text(encoding="utf-8")
     assert "from src.api.main import app" in entrada
-    assert "mount_gradio_app" in entrada
+    # Gradio es el servidor y la API se monta DENTRO, bajo /api. Es al reves de lo que
+    # parece natural, y es obligatorio: ZeroGPU --unica opcion gratuita para Spaces de
+    # Gradio-- registra la funcion @spaces.GPU desde `demo.launch()`. Con un uvicorn
+    # propio esa verificacion no corre nunca y el Space muere al arrancar.
+    assert "demo.launch(" in entrada
+    assert 'app.mount("/api", api)' in entrada
+    # Sin esto Gradio levanta un servidor Node en el mismo puerto.
+    assert "ssr_mode=False" in entrada
 
 
 def test_la_tarjeta_declara_que_no_es_un_dispositivo_medico():
@@ -277,6 +289,27 @@ def test_la_descripcion_corta_entra_en_el_limite_de_hugging_face():
         f"son {len(descripcion)} caracteres y el limite es 60: {descripcion!r}"
     )
 
+def test_la_pantalla_no_queda_a_nivel_de_modulo():
+    """
+    El runtime de Gradio inspecciona el modulo buscando un `Blocks`. Si lo encuentra a
+    nivel de modulo levanta SU PROPIO servidor en el 7860, y el nuestro muere con
+    "address already in use". Ya tumbo un despliegue.
+
+    La pantalla tiene que construirse dentro de una funcion; a nivel de modulo solo puede
+    quedar `app`.
+    """
+    entrada = (RAIZ / "deploy" / "hf_space" / "app.py").read_text(encoding="utf-8")
+    sueltas = [
+        l for l in entrada.splitlines()
+        if l.strip().startswith(("with gr.Blocks", "demo = gr.Blocks", "demo = gr.Interface"))
+        and not l.startswith((" ", "	"))
+    ]
+    assert not sueltas, (
+        f"hay un Blocks de Gradio a nivel de modulo, movelo dentro de una "
+        f"funcion: {sueltas}"
+    )
+    assert "def main()" in entrada
+
 PRUEBAS = [
     test_el_space_lleva_todos_los_modulos_que_la_api_importa,
     test_la_api_no_arrastra_ninguna_dependencia_pesada,
@@ -288,6 +321,7 @@ PRUEBAS = [
     test_la_tarjeta_y_el_punto_de_entrada_concuerdan,
     test_el_space_lleva_el_punto_de_entrada_y_no_el_dockerfile,
     test_la_demostracion_monta_la_api_y_no_la_reimplementa,
+    test_la_pantalla_no_queda_a_nivel_de_modulo,
     test_la_tarjeta_declara_que_no_es_un_dispositivo_medico,
     test_la_descripcion_corta_entra_en_el_limite_de_hugging_face,
     test_lo_armado_reproduce_la_estructura_que_espera_el_space,

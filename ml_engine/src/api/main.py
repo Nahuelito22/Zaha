@@ -58,14 +58,17 @@ def obtener_modelo() -> cargador.Modelo:
     return m  # type: ignore[return-value]
 
 
-@asynccontextmanager
-async def ciclo_de_vida(app: FastAPI):
+def cargar_modelo() -> None:
     """
-    El artefacto se carga una vez al arrancar, no por pedido.
+    Carga el artefacto una vez. Normalmente la llama el ciclo de vida.
 
-    Si falla, el proceso **igual levanta** y `/salud` responde `degradado`. Es a
-    propósito: así la causa queda visible en el endpoint de salud en vez de en un
-    contenedor que reinicia en bucle sin decir por qué.
+    Es pública y separada porque esta API **también se monta como sub-aplicación** dentro
+    del servidor de Gradio en el Space (ver `deploy/hf_space/app.py`), y Starlette no
+    ejecuta el ciclo de vida de una aplicación montada: sin esto, `/salud` responderia
+    `degradado` para siempre aunque el artefacto estuviera perfecto.
+
+    Si falla, no levanta excepción. El proceso tiene que arrancar igual para que `/salud`
+    pueda explicar la causa, en vez de un contenedor que reinicia en bucle sin decir nada.
     """
     try:
         _estado["modelo"] = cargador.Modelo()
@@ -73,6 +76,12 @@ async def ciclo_de_vida(app: FastAPI):
     except Exception as exc:  # noqa: BLE001 — se reporta por /salud
         _estado["modelo"] = None
         _estado["error"] = f"{type(exc).__name__}: {exc}"
+
+
+@asynccontextmanager
+async def ciclo_de_vida(app: FastAPI):
+    """El artefacto se carga una vez al arrancar, no por pedido."""
+    cargar_modelo()
     yield
     _estado["modelo"] = None
 
