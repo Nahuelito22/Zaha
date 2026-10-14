@@ -3,7 +3,7 @@ Arma el contenido del Space de Hugging Face y lo deja listo para empujar (SCRUM-
 
 POR QUE HACE FALTA ARMAR ALGO Y NO SE EMPUJA EL REPO ENTERO
 El repositorio del Space es su propio repositorio git, y su raíz tiene que tener el
-`Dockerfile` y el `README.md` con el encabezado de Spaces. Además, mandar el monorepo
+`app.py` y el `README.md` con el encabezado de Spaces. Además, mandar el monorepo
 completo subiría la aplicación clínica, los notebooks y los datos crudos a un contenedor
 que sólo tiene que servir un modelo.
 
@@ -39,9 +39,11 @@ ESTE_DIRECTORIO = Path(__file__).resolve().parent
 # Sólo lo que la API necesita en tiempo de ejecución. Nada de notebooks, datos crudos,
 # aplicación clínica ni las dependencias de desarrollo.
 CONTENIDO: list[tuple[str, str]] = [
-    ("deploy/hf_space/Dockerfile", "Dockerfile"),
+    # El punto de entrada del SDK de Gradio. NO va el Dockerfile: Hugging Face paso
+    # Docker Spaces a plan pago, asi que el Space corre con Gradio y `app.py` monta
+    # adentro la misma FastAPI. El Dockerfile se conserva en el repo para otros hosts.
+    ("deploy/hf_space/app.py", "app.py"),
     ("deploy/hf_space/README.md", "README.md"),
-    ("deploy/hf_space/.dockerignore", ".dockerignore"),
     # Produccion: fastapi, uvicorn, pydantic, onnxruntime, numpy. Sin torch ni pandas.
     ("ml_engine/requirements.txt", "requirements.txt"),
     # El paquete. `src/__init__.py` NO existe en el repo (src es un paquete implicito);

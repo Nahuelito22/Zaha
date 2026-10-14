@@ -9,6 +9,11 @@
 # Lo que se despliega es una API REST que consume la Edge Function de Supabase
 # (SCRUM-64), no una demo con interfaz. Gradio agregaria una UI que nadie usa y
 # una capa mas entre el pedido y onnxruntime.
+#
+# HOY NO SE USA. Hugging Face paso Docker Spaces a plan pago, asi que el Space corre con
+# el SDK de Gradio y el punto de entrada es `app.py`. Este archivo se conserva porque
+# sigue siendo valido sin cambios en cualquier host que corra contenedores --Render,
+# Fly.io, Koyeb-- y porque documenta exactamente que necesita la API para correr.
 # =============================================================================
 
 FROM python:3.12-slim

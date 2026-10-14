@@ -3,8 +3,9 @@ title: Zaha — API de inferencia
 emoji: 🩺
 colorFrom: gray
 colorTo: red
-sdk: docker
-app_port: 7860
+sdk: gradio
+sdk_version: 6.30.0
+app_file: app.py
 pinned: false
 license: apache-2.0
 short_description: Estimacion de deterioro clinico para el CDSS Zaha. No calcula NEWS2.
@@ -19,6 +20,12 @@ Argentina).
 > **Esto no es un dispositivo médico.** Es un prototipo académico. No está autorizado por
 > ANMAT ni por ninguna autoridad regulatoria, y no debe usarse para tomar decisiones
 > clínicas sobre personas reales.
+
+## Cómo está hosteado
+
+El SDK es **Gradio**, no Docker: Hugging Face pasó Docker Spaces a plan pago. La pantalla
+que se ve acá es una demostración, y **debajo corre la misma API de FastAPI** que consume
+la aplicación clínica. La documentación interactiva está en `/docs`.
 
 ## Qué hace y qué no
 
