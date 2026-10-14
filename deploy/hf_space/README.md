@@ -26,9 +26,17 @@ Argentina).
 
 ## Cómo está hosteado
 
-El SDK es **Gradio**, no Docker: Hugging Face pasó Docker Spaces a plan pago. La pantalla
-que se ve acá es una demostración, y **debajo corre la misma API de FastAPI** que consume
-la aplicación clínica. La documentación interactiva está en `/docs`.
+El SDK es **Gradio**, no Docker: en el plan gratuito de Hugging Face, Docker Spaces y
+`cpu-basic` son de pago, y los Spaces de Gradio corren obligatoriamente en **ZeroGPU**.
+
+Lo que se ve acá es una demostración, y **debajo corre la misma API de FastAPI** que
+consume la aplicación clínica, montada en **`/api`**. La documentación interactiva está en
+[`/api/docs`](/api/docs).
+
+> Por qué la API cuelga de `/api` y no de la raíz: ZeroGPU exige que exista una función
+> decorada con `@spaces.GPU` y la registra desde `demo.launch()`. Eso obliga a que el
+> servidor lo levante Gradio, así que la API se monta dentro en lugar de al revés. El
+> modelo no usa GPU: es una regresión logística que corre en CPU.
 
 ## Qué hace y qué no
 
@@ -43,13 +51,13 @@ la estimación y conserva la escala.
 
 | Método | Ruta | Devuelve |
 |---|---|---|
-| `GET` | `/salud` | Estado del servicio. Responde 200 incluso si el modelo no cargó, con `estado: degradado` y la causa. |
-| `GET` | `/modelo` | Metadatos del modelo: features, cohorte de entrenamiento, curva de umbrales y limitaciones. |
-| `POST` | `/prediccion` | Probabilidad, decisión de alerta, punto de operación y explicación. |
-| `GET` | `/docs` | Documentación interactiva (OpenAPI). |
+| `GET` | `/api/salud` | Estado del servicio. Responde 200 incluso si el modelo no cargó, con `estado: degradado` y la causa. |
+| `GET` | `/api/modelo` | Metadatos del modelo: features, cohorte de entrenamiento, curva de umbrales y limitaciones. |
+| `POST` | `/api/prediccion` | Probabilidad, decisión de alerta, punto de operación y explicación. |
+| `GET` | `/api/docs` | Documentación interactiva (OpenAPI). |
 
 ```bash
-curl -X POST .../prediccion -H "Content-Type: application/json" -d '{
+curl -X POST .../api/prediccion -H "Content-Type: application/json" -d '{
   "observacion": {
     "frecuencia_respiratoria": 26, "spo2": 91, "temperatura": 38.4,
     "presion_sistolica": 96, "frecuencia_cardiaca": 122,

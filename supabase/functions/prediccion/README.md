@@ -9,10 +9,15 @@ acá y esta función —que corre del lado del servidor— es la única que lo t
 Los dos secretos primero. **No van al repositorio ni a `.env` del cliente.**
 
 ```bash
-supabase secrets set ZAHA_API_URL=https://zaha-cdss-<space>.hf.space
+supabase secrets set ZAHA_API_URL=https://zaha-cdss-inferencia.hf.space/api
 supabase secrets set ZAHA_API_TOKEN=<token de lectura de Hugging Face>
 supabase functions deploy prediccion
 ```
+
+> **El `/api` del final no es opcional.** La API vive montada bajo `/api` dentro del
+> servidor de Gradio del Space; sin ese sufijo, esta función pediría `/prediccion` en la
+> raíz y recibiría la pantalla de demostración en vez de JSON. El porqué está en
+> `deploy/hf_space/app.py`.
 
 El token es de la cuenta `Zaha-CDSS` y le alcanza con permiso de **lectura** sobre el
 Space: esta función sólo consulta.
