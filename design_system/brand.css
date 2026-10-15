@@ -149,13 +149,17 @@
 }
 .zaha-brand .btn svg { display: block; }
 .zaha-brand .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-.zaha-brand .btn-primary { background: var(--color-accent); color: var(--color-bg); }
-.zaha-brand .btn-primary:hover { background: var(--color-accent-600); }
-.zaha-brand .btn-primary:active { background: var(--color-accent-700); }
+/* El relleno va en -700 y no en --color-accent: el texto crema sobre la
+   terracota daba 3.03:1 (Lighthouse lo marcó en el botón Entrar del login).
+   Mismo criterio que el resto de la capa: el acento es relleno y borde, nunca
+   fondo de texto. Medido en design_system/auditoria_contraste.py. */
+.zaha-brand .btn-primary { background: var(--color-accent-700); color: var(--color-bg); }
+.zaha-brand .btn-primary:hover { background: var(--color-accent-800); }
+.zaha-brand .btn-primary:active { background: var(--color-accent-900); }
 .zaha-brand .btn-secondary { border-color: var(--color-divider); }
 .zaha-brand .btn-secondary:hover { background: color-mix(in srgb, var(--color-text) 7%, transparent); }
 .zaha-brand .btn-secondary:active { background: color-mix(in srgb, var(--color-text) 14%, transparent); }
-.zaha-brand .btn-ghost { color: var(--color-accent); padding-inline: var(--space-1); }
+.zaha-brand .btn-ghost { color: var(--color-accent-700); padding-inline: var(--space-1); }
 .zaha-brand .btn-ghost:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
 .zaha-brand .btn-ghost:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
 .zaha-brand .btn-icon { width: 36px; height: 36px; padding: 0; }

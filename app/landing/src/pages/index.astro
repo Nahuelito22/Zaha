@@ -80,16 +80,44 @@ const capacidades = [
 <html lang="es-AR">
 	<head>
 		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
+		<!-- La Z sobre beige, la misma del ícono de la PWA. Los genera
+		     scripts/generar_marca_web.py. -->
+		<link rel="icon" href="/favicon.ico" sizes="48x48" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<meta name="theme-color" content="#8c491a" />
+		<link rel="canonical" href="https://zahasalud.com.ar/" />
+
+		<!-- Vista previa al compartir el link (WhatsApp, LinkedIn, etc.). La
+		     imagen va con URL absoluta: las redes no resuelven rutas relativas. -->
+		<meta property="og:type" content="website" />
+		<meta property="og:locale" content="es_AR" />
+		<meta property="og:site_name" content="Zaha" />
+		<meta property="og:url" content="https://zahasalud.com.ar/" />
+		<meta property="og:title" content="Zaha — Soporte a la decisión clínica" />
+		<meta property="og:description" content="NEWS2 y alertas tempranas de deterioro para enfermería de sala de internación. Proyecto académico." />
+		<meta property="og:image" content="https://zahasalud.com.ar/og.png" />
+		<meta property="og:image:width" content="1200" />
+		<meta property="og:image:height" content="630" />
+		<meta property="og:image:alt" content="La Z de Zaha tallada en piedra, junto al titular: El deterioro avisa antes de ser una urgencia." />
+		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
 		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<!-- Preload que se vuelve hoja al cargar: no bloquea el primer pintado
+		     (Lighthouse medía ~820 ms en móvil). Mismo patrón que la app. -->
 		<link
-			rel="stylesheet"
+			rel="preload"
+			as="style"
 			href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap"
+			onload="this.onload=null;this.rel='stylesheet'"
 		/>
+		<noscript>
+			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap" />
+		</noscript>
+		<!-- La Z es lo más grande de la primera pantalla (el LCP), pero vive
+		     dentro de un <image> de SVG y el navegador la descubre tarde. -->
+		<link rel="preload" as="image" href="/marca/zaha-z.png" fetchpriority="high" />
 		<meta
 			name="description"
 			content="Zaha — soporte a la decisión clínica: NEWS2 y alertas tempranas de deterioro para enfermería de sala de internación. Proyecto académico."
