@@ -118,6 +118,49 @@ export function depurarExplicacion(prediccion: Prediccion): Prediccion {
   return prediccion
 }
 
+/**
+ * Parámetros sobre los que enfermería NO puede actuar al pie de la cama.
+ *
+ * SCRUM-66 dejó medido que la edad es el **segundo contribuyente** del modelo. Mostrarla
+ * en la misma lista que la frecuencia respiratoria invita a leer "el paciente está en
+ * riesgo por su edad", que no es una conclusión accionable ni es lo que el modelo quiso
+ * decir: la edad es un factor de base, no algo que haya cambiado hoy.
+ *
+ * Se siguen mostrando —ocultarlas haría que las contribuciones no sumaran el logit y la
+ * explicación dejaría de ser verificable—, pero separadas y después.
+ */
+export const PARAMETROS_NO_ACCIONABLES = new Set(['edad'])
+
+export type Contribucion = NonNullable<Prediccion['explicacion']>['contribuciones'][number]
+
+/**
+ * Separa las contribuciones en las que enfermería puede atender y las de base.
+ *
+ * Conserva el orden de entrada, que la API ya devuelve por magnitud decreciente.
+ */
+export function separarContribuciones(contribuciones: Contribucion[]): {
+  accionables: Contribucion[]
+  deBase: Contribucion[]
+} {
+  const accionables: Contribucion[] = []
+  const deBase: Contribucion[] = []
+  for (const c of contribuciones) {
+    ;(PARAMETROS_NO_ACCIONABLES.has(c.parametro) ? deBase : accionables).push(c)
+  }
+  return { accionables, deBase }
+}
+
+/** Nombre clínico del parámetro. El de la API es el del modelo, no el de la pantalla. */
+export const ETIQUETA_PARAMETRO: Record<string, string> = {
+  frecuencia_respiratoria: 'Frecuencia respiratoria',
+  spo2: 'Saturación de oxígeno',
+  temperatura: 'Temperatura',
+  presion_sistolica: 'Presión sistólica',
+  frecuencia_cardiaca: 'Frecuencia cardíaca',
+  confusion: 'Confusión nueva',
+  edad: 'Edad',
+}
+
 export type ServicioPrediccion = {
   pedir: (
     patientId: string,
