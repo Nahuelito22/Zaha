@@ -18,7 +18,7 @@ export default defineConfig({
       // la caché del service worker — una toma pendiente no es un recurso
       // cacheado, es una escritura que todavía no ocurrió.
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
         // Nunca cachear respuestas de la API: un score viejo mostrado como
         // actual es peor que no mostrar nada.
         navigateFallbackDenylist: [/^\/rest\//, /^\/auth\//],
@@ -70,7 +70,6 @@ export default defineConfig({
             type: 'image/png',
             purpose: 'maskable',
           },
-          { src: 'favicon.svg', sizes: 'any', type: 'image/svg+xml' },
         ],
       },
     }),

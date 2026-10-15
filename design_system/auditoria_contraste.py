@@ -85,6 +85,12 @@ pruebas_marca = [
     (".tag-outline: texto acento-700",     "#8c491a", B_BG, 4.5, "texto"),
     (".tag-outline: borde acento",         "#c67139", B_BG, 3.0, "no-texto"),
     ("outline de foco s/ fondo",           "#c67139", B_BG, 3.0, "no-texto"),
+    # Los botones de marca faltaban acá, y por eso el Entrar del login pasó
+    # con crema sobre terracota (3.03:1) hasta que lo marcó Lighthouse.
+    (".btn-primary: crema s/ acento-700",  B_BG, "#8c491a", 4.5, "texto"),
+    (".btn-primary:hover s/ acento-800",   B_BG, "#643312", 4.5, "texto"),
+    (".btn-primary:active s/ acento-900",  B_BG, "#402310", 4.5, "texto"),
+    (".btn-ghost: acento-700 s/ fondo",    "#8c491a", B_BG, 4.5, "texto"),
     # Los dos de abajo NO son fallas: se listan como recordatorio de que estos
     # colores son de relleno y borde, y que usarlos para texto rompe AA.
     ("acento terracota (solo relleno)",    "#c67139", B_BG, 3.0, "no-texto"),

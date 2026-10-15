@@ -2,7 +2,7 @@
 <html lang="es-AR">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!-- El manifiesto y el registro del service worker los inyecta
          vite-plugin-pwa en el build. Acá va solo lo que ese plugin no cubre:
@@ -14,13 +14,19 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Zaha" />
     <title>Zaha — Soporte a la decisión clínica</title>
+    <meta name="description" content="Aplicación clínica de Zaha: NEWS2 y alertas tempranas de deterioro para enfermería. Proyecto académico, no es un dispositivo médico." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <!-- Las dos capas del sistema de diseño: Figtree para la clínica, Caprasimo
          para los títulos de marca del login. En un solo pedido. Se cargan acá y
          no con @import desde el CSS: al concatenar las dos hojas en un bundle,
-         un @import que queda después de una regla se descarta en silencio. -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&display=swap" />
+         un @import que queda después de una regla se descarta en silencio.
+         Va como preload que se vuelve hoja al cargar, no como hoja directa:
+         así no bloquea el primer pintado (Lighthouse medía ~820 ms en móvil).
+         Con display=swap el texto sale con la fuente del sistema y se cambia
+         cuando llega. -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;500;600;700&display=swap" /></noscript>
   </head>
   <body>
     <div id="root"></div>
