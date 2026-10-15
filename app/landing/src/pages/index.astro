@@ -1,5 +1,23 @@
 ---
 import '../styles/global.css'
+import { ANCHO, ALTO, SIMBOLOS, CENTROS_ESPIRALES } from '../marca/z-simbolos'
+
+// Los cinco símbolos de la Z, en el orden en que se encienden en la intro.
+// Los moldes salen de app/landing/scripts/vectorizar_z.py.
+const simbolos = Object.entries(SIMBOLOS)
+const zPng = '/marca/zaha-z.png'
+
+// Lo que dice cada símbolo mientras se enciende: su nombre en la lámina
+// de marca y qué hace Zaha que tenga que ver. Mismo orden que SIMBOLOS.
+// Solo cosas que la app HACE; la última es objetivo, no resultado (la
+// reducción de alertas todavía tiene un IC que cruza el cero).
+const lemas = [
+	{ simbolo: 'Caminos de la vida', texto: 'El historial de cada paciente, toma a toma.' },
+	{ simbolo: 'Corazón · Cuidado', texto: 'Hecho para enfermería, al pie de la cama.' },
+	{ simbolo: 'Conexión · Energía', texto: 'Sigue funcionando sin señal y sincroniza al volver.' },
+	{ simbolo: 'Tierra · Origen', texto: 'Cada puntaje muestra de dónde sale.' },
+	{ simbolo: 'Equilibrio · Armonía', texto: 'Alertar a tiempo, sin saturar de alarmas.' },
+]
 
 // SCRUM-35. Dirección visual elegida con Nahuel sobre un lienzo de tres bocetos:
 // bloque terracota lleno arriba, el tablero real montado encima, cuatro cajas y
@@ -81,11 +99,107 @@ const capacidades = [
 	<body class="zaha-brand">
 		<a class="saltar" href="#contenido">Saltar al contenido</a>
 
+		<!-- ── Intro: la Z tallada ──────────────────────────────────────────
+		     La mueve el SCROLL, no un temporizador: quien visita controla el
+		     ritmo y nadie queda esperando que termine. El script de abajo
+		     publica el avance en --p (0 a 1) y el CSS deriva todo de ahí.
+		     Sin JS o con "reducir movimiento" queda una portada quieta de una
+		     pantalla, y el resto del sitio sigue debajo igual que siempre. -->
+		<section class="intro" aria-label="Zaha" data-intro>
+			<div class="intro-escena">
+				<div class="intro-z-marco">
+					<!-- Lo que se VE es siempre el PNG, con su piedra. Los trazados
+					     son moldes: recortan ese mismo PNG para encender cada
+					     símbolo (más luz) y dibujar su halo detrás. Cada símbolo
+					     lee su intensidad de --g0..--g4. -->
+					<svg class="intro-z" viewBox={`0 0 ${ANCHO} ${ALTO}`} width={ANCHO} height={ALTO} aria-hidden="true">
+						<defs>
+							{/* Las espirales comparten la barra de la Z, que sigue de largo:
+							    en vez de un corte recto, la luz se apaga en degradé desde
+							    el centro de cada una. Transparente y no negro, para que un
+							    degradé no tape al otro donde se cruzan. */}
+							{CENTROS_ESPIRALES.map(([cx, cy], i) => (
+								<radialGradient id={`z-suave-${i}`} gradientUnits="userSpaceOnUse" cx={cx} cy={cy} r="88">
+									<stop offset="0.55" stop-color="#fff" />
+									<stop offset="1" stop-color="#fff" stop-opacity="0" />
+								</radialGradient>
+							))}
+							{simbolos.map(([nombre, d]) => (
+								<mask id={`z-molde-${nombre}`} maskUnits="userSpaceOnUse" x="0" y="0" width={ANCHO} height={ALTO}>
+									{nombre === 'caminos'
+										? CENTROS_ESPIRALES.map((_, i) => <path d={d} fill-rule="evenodd" fill={`url(#z-suave-${i})`} />)
+										: <path d={d} fill-rule="evenodd" fill="#fff" />}
+								</mask>
+							))}
+							<filter id="z-halo" x="-30%" y="-30%" width="160%" height="160%">
+								<feGaussianBlur stdDeviation="13" />
+							</filter>
+							<!-- Aclara hacia la arena, no satura: multiplicar solo el
+							     rojo empujaba el marrón a naranja, que acá está vedado. -->
+							<filter id="z-luz">
+								<feComponentTransfer>
+									<feFuncR type="linear" slope="1.25" intercept="0.2" />
+									<feFuncG type="linear" slope="1.3" intercept="0.2" />
+									<feFuncB type="linear" slope="1.3" intercept="0.16" />
+								</feComponentTransfer>
+							</filter>
+						</defs>
+						{simbolos.map(([nombre, d], i) => (
+							<path class="z-halo" d={d} fill-rule="evenodd" filter="url(#z-halo)"
+								mask={nombre === 'caminos' ? 'url(#z-molde-caminos)' : undefined}
+								style={`opacity: var(--g${i})`} />
+						))}
+						<image href={zPng} width={ANCHO} height={ALTO} />
+						{simbolos.map(([nombre], i) => (
+							<image class="z-luz" href={zPng} width={ANCHO} height={ALTO}
+								mask={`url(#z-molde-${nombre})`} filter="url(#z-luz)"
+								style={`opacity: var(--g${i})`} />
+						))}
+					</svg>
+				</div>
+				<!-- El nombre y los cinco lemas ocupan la MISMA celda: el nombre
+				     se va al empezar el scroll y cada lema aparece con la luz de
+				     su símbolo (--g0..--g4). Son un adorno de la intro; lo mismo
+				     está dicho en la landing, por eso van ocultos al lector. -->
+				<div class="intro-pie">
+					<div class="intro-texto">
+						<p class="intro-nombre">ZAHA</p>
+						<p class="intro-bajada">Salud ancestral · Inteligencia que cuida</p>
+					</div>
+					{lemas.map((l, i) => (
+						<p class="intro-lema" aria-hidden="true" style={`--g: var(--g${i})`}>
+							<span class="lema-simbolo">{l.simbolo}</span>
+							<span class="lema-texto">{l.texto}</span>
+						</p>
+					))}
+				</div>
+				<!-- Dos cajas a propósito: la de afuera se apaga con el scroll y
+				     la de adentro tiene la animación de entrada. En una sola, la
+				     animación pisaba la opacidad del scroll mientras corría. -->
+				<span class="intro-pista" aria-hidden="true">
+					<span class="intro-pista-in">
+						Deslizá para entrar
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+					</span>
+				</span>
+			</div>
+		</section>
+
+		<!-- Con la intro viva, .pagina es sticky y .escenario-cola le agrega
+		     recorrido vacío: mientras se scrollea esa cola, el navegador mismo
+		     deja la landing quieta arriba, debajo de la capa de la intro. Con
+		     CSS y no con JS a propósito: el scroll de Chrome corre en otro hilo
+		     y fijarla desde un script la hacía temblar un cuadro. -->
+		<div class="escenario">
+		<div class="pagina">
 		<!-- ── Bloque de marca: nav + promesa ───────────────────────────── -->
 		<div class="bloque">
 			<div class="env">
 				<header class="barra">
-					<span class="marca">Zaha</span>
+					<span class="marca">
+						<span class="marca-sello"><img src="/marca/zaha-z.png" alt="" width="467" height="500" /></span>
+						Zaha
+					</span>
 					<nav aria-label="Secciones">
 						<a href="#producto">Producto</a>
 						<a href="#tecnologia">Tecnología</a>
@@ -345,6 +459,9 @@ const capacidades = [
 				Prácticas Profesionalizantes 3, 2026.
 			</p>
 		</footer>
+		</div>
+		<div class="escenario-cola" aria-hidden="true"></div>
+		</div>
 
 		<style>
 			/* ═══ Envolturas ═══════════════════════════════════════════════
@@ -381,7 +498,173 @@ const capacidades = [
 				flex-wrap: wrap; gap: var(--space-3);
 				padding-block-end: var(--space-8);
 			}
-			.marca { font-family: var(--font-heading); font-size: 22px; }
+			.marca {
+				display: inline-flex; align-items: center; gap: 10px;
+				font-family: var(--font-heading); font-size: 22px;
+			}
+			/* La Z es marrón: sobre la terracota se perdería. Va en un sello
+			   crema, que es la variante clara del ícono de la lámina de marca. */
+			.marca-sello {
+				display: grid; place-items: center;
+				width: 38px; height: 38px; border-radius: 11px;
+				background: var(--color-bg);
+			}
+			.marca-sello img { width: auto; height: 28px; }
+
+			/* ═══ Intro ═════════════════════════════════════════════════════
+			   Sin JS o con "reducir movimiento": una portada quieta de una
+			   pantalla, y el sitio sigue debajo.
+
+			   Con JS (.intro-viva, y .con-intro en el body) la intro es una
+			   CAPA fija encima del sitio. El recorrido de scroll lo da
+			   .escenario-cola (200vh), y mientras se recorre .pagina queda
+			   sticky arriba: debajo de la capa ya está la landing.
+			   El script publica, todas de 0 a 1:
+			   --p       el avance; se van el nombre y la pista
+			   --g0..4   la luz de cada símbolo, que sube y vuelve a la piedra:
+			             Caminos → Corazón → Conexión → Tierra → Equilibrio
+			   --q       el vuelo: la Z viaja y se achica hasta el sello de la
+			             barra de navegación (--dx, --dy, --s en píxeles/escala)
+			   --f       la capa crema se desvanece y deja ver la landing */
+			.intro {
+				--p: 0; --q: 0; --f: 0;
+				--dx: 0px; --dy: 0px; --s: 1;
+				--g0: 0; --g1: 0; --g2: 0; --g3: 0; --g4: 0;
+				height: 100dvh; background: var(--color-bg);
+			}
+			.intro.intro-viva { height: 0; background: none; }
+			.con-intro .pagina { position: sticky; top: 0; }
+			.con-intro .escenario-cola { height: 200vh; }
+			.intro-viva .intro-escena {
+				position: fixed; inset: 0; z-index: 20;
+				height: auto;
+				/* No tapa clics: cuando la capa se aclara, la barra de abajo
+				   ya se puede usar. */
+				pointer-events: none;
+				isolation: isolate;
+			}
+			.intro-viva .intro-escena::before {
+				content: ""; position: absolute; inset: 0; z-index: -1;
+				background: var(--color-bg);
+				opacity: calc(1 - var(--f));
+			}
+			/* Terminado el recorrido la capa se va del todo, y la Z del sello
+			   (que estuvo oculta para no verse doble) toma la posta. */
+			.intro-viva.intro-fin .intro-escena { visibility: hidden; }
+			.intro-en-curso .marca-sello img { opacity: 0; }
+			/* Arena de la paleta, un paso más profunda que --color-accent-2
+			   para que el halo se lea sobre el crema. Nunca rojo ni ámbar:
+			   esos colores son niveles de riesgo. */
+			.z-halo { fill: #dcbd85; stroke: #dcbd85; stroke-width: 14px; stroke-linejoin: round; }
+			.intro-escena {
+				position: sticky; top: 0;
+				height: 100dvh; overflow: hidden;
+				display: flex; flex-direction: column;
+				align-items: center; justify-content: center;
+				gap: var(--space-6);
+				padding-inline: var(--space-4);
+			}
+			.intro-z-marco {
+				transform:
+					translate(calc(var(--q) * var(--dx)), calc(var(--q) * var(--dy)))
+					scale(calc(1 - var(--q) * (1 - var(--s))));
+				will-change: transform;
+			}
+			.intro-z {
+				display: block;
+				/* El tercer tope es para el teléfono: con solo el alto, en 390px
+				   de ancho la Z medía 394 y se salía de la pantalla. */
+				height: min(50dvh, 460px, calc(78vw * 500 / 467)); width: auto;
+				filter: drop-shadow(0 18px 28px rgb(62 46 35 / 0.18));
+			}
+			.intro-pie { display: grid; place-items: center; }
+			.intro-pie > * { grid-area: 1 / 1; }
+			.intro-lema {
+				margin: 0;
+				display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+				text-align: center;
+				/* Con umbral: el lema recién aparece cuando su luz pasó 0,3 y
+				   está entero desde 0,6. Así entre un símbolo y el siguiente
+				   hay un instante sin texto, y no dos frases encimadas. */
+				opacity: clamp(0, calc((var(--g) - 0.3) * 3.4), 1);
+				transform: translateY(calc((1 - var(--g)) * 10px));
+			}
+			.lema-simbolo {
+				font-size: clamp(11px, 1vw, 13px); font-weight: 600;
+				letter-spacing: 0.16em; text-transform: uppercase;
+				color: var(--color-accent-700);
+			}
+			.lema-texto {
+				font-family: var(--font-heading);
+				font-size: clamp(20px, 2.4vw, 30px); line-height: 1.2;
+				max-width: 24ch; text-wrap: balance;
+				color: var(--color-text);
+			}
+			.intro-texto {
+				text-align: center;
+				opacity: calc(1 - clamp(0, var(--p) / 0.08, 1));
+				transform: translateY(calc(var(--p) * 60vh));
+			}
+			.intro-nombre {
+				margin: 0;
+				font-weight: 600; letter-spacing: 0.42em;
+				/* el letter-spacing también se agrega después de la última
+				   letra; esto lo compensa para que quede centrado */
+				margin-inline-end: -0.42em;
+				font-size: clamp(30px, 4.4vw, 48px);
+				color: var(--color-accent-700);
+			}
+			.intro-bajada {
+				margin: var(--space-2) 0 0;
+				font-size: clamp(11px, 1.1vw, 14px);
+				letter-spacing: 0.16em; text-transform: uppercase;
+				color: var(--color-neutral-700);
+			}
+			.intro-pista {
+				position: absolute; bottom: var(--space-6);
+				font-size: 13px; color: var(--color-neutral-700);
+				opacity: calc(1 - clamp(0, var(--p) / 0.04, 1));
+			}
+			.intro-pista-in { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+
+			/* La entrada al cargar: la Z se "talla" (aparece desde el centro y
+			   se enfoca) y después llegan el nombre y la pista. Solo corre una
+			   vez y solo si el sistema no pide reducir el movimiento. */
+			/* .intro-forzada la pone el script con ?animar en la URL: es para
+			   la exposición, cuando la máquina que presenta tiene "reducir
+			   movimiento" activado. Sin ese parámetro se respeta al visitante. */
+			@media (prefers-reduced-motion: no-preference) {
+				.intro-z { animation: tallar 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+				.intro-nombre, .intro-bajada { animation: asomar 0.9s ease-out backwards; }
+				.intro-nombre { animation-delay: 0.9s; }
+				.intro-bajada { animation-delay: 1.15s; }
+				.intro-pista-in { animation: asomar 0.8s ease-out 1.8s backwards; }
+				.intro-pista svg { animation: latir 2.2s ease-in-out 2.6s infinite; }
+			}
+			.intro-forzada .intro-z { animation: tallar 1.6s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+			.intro-forzada .intro-nombre, .intro-forzada .intro-bajada { animation: asomar 0.9s ease-out backwards; }
+			.intro-forzada .intro-nombre { animation-delay: 0.9s; }
+			.intro-forzada .intro-bajada { animation-delay: 1.15s; }
+			.intro-forzada .intro-pista-in { animation: asomar 0.8s ease-out 1.8s backwards; }
+			.intro-forzada .intro-pista svg { animation: latir 2.2s ease-in-out 2.6s infinite; }
+			@keyframes tallar {
+				from {
+					opacity: 0; transform: scale(1.06); filter: blur(8px) drop-shadow(0 0 0 transparent);
+					clip-path: circle(0% at 50% 50%);
+				}
+				to {
+					opacity: 1; transform: none; filter: blur(0) drop-shadow(0 18px 28px rgb(62 46 35 / 0.18));
+					clip-path: circle(75% at 50% 50%);
+				}
+			}
+			@keyframes asomar {
+				from { opacity: 0; translate: 0 10px; }
+				to   { opacity: 1; translate: 0 0; }
+			}
+			@keyframes latir {
+				0%, 100% { translate: 0 0; }
+				50%      { translate: 0 5px; }
+			}
 			.barra nav { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
 			.barra nav a { color: var(--color-accent-200); font-size: 15px; }
 			.barra nav a:hover { color: var(--color-bg); }
@@ -672,5 +955,85 @@ const capacidades = [
 				.cajas { grid-template-columns: 1fr; }
 			}
 		</style>
+
+		<script>
+			// Publica el avance del scroll por la intro (ver el bloque Intro del
+			// CSS). Una sola escritura por cuadro: el scroll solo pide un rAF si
+			// no hay uno pendiente. Con "reducir movimiento" no se engancha nada
+			// y la intro queda como portada quieta de una pantalla.
+			//
+			// Reparto del recorrido: los cinco símbolos se encienden entre 0,06
+			// y 0,66, uno detrás del otro y apenas solapados; de 0,66 a 1 la Z
+			// vuela al sello de la barra y la capa crema se desvanece.
+			const PICOS = [0.12, 0.24, 0.36, 0.48, 0.6]
+			const ANCHO_PICO = 0.085
+			const INICIO_CIERRE = 0.66
+			const acotar = (x: number) => Math.min(1, Math.max(0, x))
+			// Sube y baja suave (seno), no en triángulo: la luz no "rebota".
+			const luz = (p: number, pico: number) => {
+				const t = acotar(1 - Math.abs(p - pico) / ANCHO_PICO)
+				return Math.sin((t * Math.PI) / 2) ** 2
+			}
+			const suave = (t: number) => t * t * (3 - 2 * t)
+			const intro = document.querySelector<HTMLElement>('[data-intro]')
+			const reducir = window.matchMedia('(prefers-reduced-motion: reduce)')
+
+			// ?animar fuerza la animación aunque el sistema pida reducir el
+			// movimiento. Es para presentar desde una máquina ajena; el sitio
+			// publicado sin el parámetro sigue respetando a cada visitante.
+			const forzar = new URLSearchParams(window.location.search).has('animar')
+
+			const escenario = document.querySelector<HTMLElement>('.escenario')
+			const cola = document.querySelector<HTMLElement>('.escenario-cola')
+			const marco = document.querySelector<HTMLElement>('.intro-z-marco')
+			const sello = document.querySelector<HTMLElement>('.marca-sello img')
+
+			if (intro && escenario && cola && marco && sello && (forzar || !reducir.matches)) {
+				intro.classList.add('intro-viva')
+				document.body.classList.add('con-intro')
+				if (forzar) intro.classList.add('intro-forzada')
+				let pendiente = false
+
+				const pintar = () => {
+					pendiente = false
+					const recorrido = cola.offsetHeight
+					const hecho = window.scrollY - escenario.offsetTop
+					const p = acotar(recorrido > 0 ? hecho / recorrido : 1)
+
+					// El vuelo: del centro de la Z grande al centro del sello. La
+					// escena es fija en (0,0), así que offsetLeft/Top ya son
+					// coordenadas de pantalla, y no incluyen la transformación.
+					const destino = sello.getBoundingClientRect()
+					const dx = destino.left + destino.width / 2 - (marco.offsetLeft + marco.offsetWidth / 2)
+					const dy = destino.top + destino.height / 2 - (marco.offsetTop + marco.offsetHeight / 2)
+
+					const cierre = acotar((p - INICIO_CIERRE) / (1 - INICIO_CIERRE))
+					const s = intro.style
+					s.setProperty('--p', p.toFixed(4))
+					// Escalonado: primero vuela la Z (0 → 0,75 del cierre) y recién
+					// después se aclara la capa (0,4 → 1). Al revés, la Z todavía
+					// grande quedaba encima del titular de la landing.
+					s.setProperty('--q', suave(acotar(cierre / 0.75)).toFixed(4))
+					s.setProperty('--f', suave(acotar((cierre - 0.4) / 0.6)).toFixed(4))
+					s.setProperty('--dx', `${dx.toFixed(1)}px`)
+					s.setProperty('--dy', `${dy.toFixed(1)}px`)
+					s.setProperty('--s', (destino.height / marco.offsetHeight).toFixed(4))
+					PICOS.forEach((pico, i) => s.setProperty(`--g${i}`, luz(p, pico).toFixed(3)))
+
+					intro.classList.toggle('intro-fin', p >= 1)
+					document.body.classList.toggle('intro-en-curso', p < 1)
+				}
+				const pedir = () => {
+					if (!pendiente) {
+						pendiente = true
+						requestAnimationFrame(pintar)
+					}
+				}
+
+				window.addEventListener('scroll', pedir, { passive: true })
+				window.addEventListener('resize', pedir)
+				pintar()
+			}
+		</script>
 	</body>
 </html>
