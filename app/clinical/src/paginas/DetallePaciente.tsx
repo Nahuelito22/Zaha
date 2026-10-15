@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import {
   PARAMETROS_NEWS2,
@@ -33,6 +33,7 @@ type Episodio = {
  */
 export function DetallePaciente() {
   const { encounterId } = useParams<{ encounterId: string }>()
+  const { hash } = useLocation()
   const [episodio, setEpisodio] = useState<Episodio | null>(null)
   const [tomas, setTomas] = useState<VitalDesglose[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -70,6 +71,17 @@ export function DetallePaciente() {
       vigente = false
     }
   }, [encounterId])
+
+  // El acceso rápido de la sala entra con `#historial`. React Router no hace el
+  // salto solo, y aunque lo hiciera no serviría: cuando la página se monta, el
+  // historial todavía no existe en el DOM —aparece recién cuando llegan las
+  // tomas—. Por eso el efecto depende de `tomas` y no sólo del hash.
+  useEffect(() => {
+    if (hash !== '#historial' || tomas === null) return
+    document
+      .getElementById('historial')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [hash, tomas])
 
   if (error) {
     return (
@@ -174,7 +186,10 @@ function Desglose({ toma }: { toma: VitalDesglose }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h3>De dónde sale el score</h3>
+      {/* «De dónde sale el score» describía el propósito del desarrollador, no
+          la pregunta de quien está al lado de la cama. Lo que esa persona
+          quiere saber es qué parámetro está sumando y cuánto. */}
+      <h3>Aporte de cada parámetro</h3>
 
       <ul className="flex flex-col gap-1">
         {PARAMETROS_NEWS2.map((p) => {
@@ -196,10 +211,12 @@ function Desglose({ toma }: { toma: VitalDesglose }) {
         })}
       </ul>
 
-      <p className="ctext-xs ctext-muted">
-        Los 7 aportes suman {toma.news2_score}. El cálculo lo hace la base de
-        datos, no esta pantalla.
-      </p>
+      {/* Acá iba «Los 7 aportes suman N. El cálculo lo hace la base de datos,
+          no esta pantalla». Se quitó: la suma ya está a la vista arriba y la
+          procedencia del cálculo es una propiedad de la arquitectura, no algo
+          que el enfermero necesite leer en cada paciente. Sigue documentada
+          donde corresponde (ADR-004 y la documentación de la entrega). En un
+          teléfono ese párrafo empujaba las alertas fuera de la pantalla. */}
 
       {/* El aviso del rojo AISLADO solo corresponde cuando ese rojo es lo que
           eleva el nivel. Con un total de 5 o más el nivel ya viene del puntaje,
@@ -227,12 +244,25 @@ function Desglose({ toma }: { toma: VitalDesglose }) {
 function Historial({ tomas }: { tomas: VitalDesglose[] }) {
   if (tomas.length === 0) return null
 
+  // La explicación de las enmiendas sólo aparece cuando HAY una enmienda. En el
+  // caso habitual —ningún valor corregido— era una línea que describía algo que
+  // no estaba pasando en esta pantalla. Cuando sí pasa, en cambio, hace falta:
+  // sin ella, ver dos tomas con el mismo horario parece un error del sistema.
+  const hayEnmiendas = tomas.some((t) => t.superseded_by !== null)
+
   return (
-    <div className="flex flex-col gap-2">
+    // `scroll-mt-4` para que, al entrar desde el acceso rápido de la sala, el
+    // título no quede pegado al borde superior de la pantalla.
+    <div id="historial" className="flex scroll-mt-4 flex-col gap-2">
       <h3>Historial</h3>
       <p className="ctext-xs ctext-muted">
-        {tomas.length} {tomas.length === 1 ? 'toma' : 'tomas'}. Las corregidas no
-        se borran: quedan visibles junto a la enmienda que las reemplazó.
+        {tomas.length} {tomas.length === 1 ? 'toma' : 'tomas'}
+        {hayEnmiendas && (
+          <>
+            . Las corregidas no se borran: quedan visibles junto a la enmienda que
+            las reemplazó
+          </>
+        )}
       </p>
 
       <ul className="flex flex-col gap-2">

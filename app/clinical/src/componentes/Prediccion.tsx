@@ -79,61 +79,101 @@ export function Prediccion({ patientId }: { patientId: string }) {
     0.0001,
   )
 
+  // LOS DOS QUE MÁS EMPUJAN, PARA LA LÍNEA QUE SE LEE SIN ABRIR NADA.
+  // La HU-04 pide que la alerta NO sea una caja negra: tiene que haber una
+  // razón visible, siempre. Pero siete barras no se leen en una ronda, así que
+  // la razón se da en una línea y el desglose entero queda a un toque.
+  // Sólo los que ACERCAN a la alerta: decir "pesa la frecuencia cardíaca"
+  // cuando esa frecuencia está alejando la estimación sería mentir. Y sólo los
+  // accionables, por lo mismo que la edad va aparte.
+  const principales = accionables
+    .filter((c) => c.direccion === 'aumenta')
+    .slice(0, 2)
+    .map((c) => {
+      const etiqueta = ETIQUETA_PARAMETRO[c.parametro] ?? c.parametro
+      return etiqueta.charAt(0).toLowerCase() + etiqueta.slice(1)
+    })
+
   return (
     <section className="predict-panel flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
+      {/* EL AVISO DE QUE ESTO NO ES NEWS2 PASÓ DE PÁRRAFO A ETIQUETA.
+          Decía lo mismo en cuatro renglones, y en un teléfono esos cuatro
+          renglones empujaban las alertas fuera de la pantalla. El trabajo de
+          distinguir la estimación de la escala ya lo hacen el violeta y el
+          borde punteado, que están en todo el panel; el texto sólo tiene que
+          nombrarlo, no explicarlo. La explicación completa vive en la landing
+          y en la documentación, que es donde se lee una vez y no en cada
+          ronda. */}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
         <h3 className="m-0">Estimación del modelo</h3>
         <span className="predict">
           {prediccion.alerta ? 'alerta' : 'sin alerta'} ·{' '}
           {(prediccion.probabilidad * 100).toFixed(1)} %
         </span>
+        <span className="ctext-xs ctext-muted">no es NEWS2</span>
       </div>
 
-      <p className="ctext-sm">
-        Esto <strong>no es NEWS2</strong>. Es una estimación de un modelo entrenado sobre
-        otra población, y se muestra aparte justamente para que no se confunda con el
-        puntaje de la escala.
-      </p>
-
+      {/* LA RAZÓN, EN UNA LÍNEA. Es lo único que la ronda necesita leer: qué
+          está empujando la estimación. El desglose completo, con cuánto pesa
+          cada parámetro, está un renglón más abajo. */}
       {explicacion === null ? (
         <p className="ctext-sm ctext-muted">
           La explicación de esta estimación no pudo verificarse contra el modelo, así que
           no se muestra. El número de arriba sigue siendo válido.
         </p>
       ) : (
-        <>
-          <ul className="flex flex-col gap-2">
-            {accionables.map((c) => (
-              <Fila key={c.parametro} c={c} maxima={maxima} />
-            ))}
-          </ul>
+        principales.length > 0 && (
+          <p className="ctext-sm">
+            Pesan sobre todo{' '}
+            <strong>{principales.join(' y ')}</strong>.
+          </p>
+        )
+      )}
 
-          {deBase.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <p className="ctext-xs ctext-muted">
-                Pesa en la estimación, pero no es algo sobre lo que se pueda actuar en
-                esta toma:
-              </p>
+      {/* EL PUNTO DE OPERACIÓN Y LA ADVERTENCIA SE DEMOTAN, NO SE BORRAN.
+          La advertencia viaja con cada predicción desde la API y es la
+          diferencia entre presentar un resultado y presentarlo con su límite:
+          sacarla de la aplicación sería sobrevender el modelo. Pero leerla
+          entera en cada paciente, durante una ronda, no la hace más cierta —
+          sólo hace que se deje de leer.
+          Queda a un toque, y el resumen del disparador se ve sin abrir nada:
+          quien necesite el umbral exacto o el intervalo de confianza lo
+          encuentra; quien está priorizando camas, no lo tropieza. */}
+      <details className="predict-detalles">
+        <summary className="ctext-xs">Ver desglose completo y límites del modelo</summary>
+        <div className="flex flex-col gap-3 pt-2">
+          {explicacion !== null && (
+            <>
               <ul className="flex flex-col gap-2">
-                {deBase.map((c) => (
+                {accionables.map((c) => (
                   <Fila key={c.parametro} c={c} maxima={maxima} />
                 ))}
               </ul>
-            </div>
+
+              {deBase.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  {/* La edad sigue separada del resto, incluso acá adentro: es
+                      lo que evita leer "está en riesgo por su edad". */}
+                  <p className="ctext-xs ctext-muted">No accionable en esta toma:</p>
+                  <ul className="flex flex-col gap-2">
+                    {deBase.map((c) => (
+                      <Fila key={c.parametro} c={c} maxima={maxima} />
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
           )}
-        </>
-      )}
 
-      <p className="ctext-xs ctext-muted">
-        Umbral usado: {prediccion.punto_de_operacion.umbral.toFixed(3)} (sensibilidad
-        objetivo {(prediccion.punto_de_operacion.sensibilidad_objetivo * 100).toFixed(0)} %).
-        {medicion && <> Estimado sobre la toma de {fechaHora(medicion.recorded_at)}.</>}
-      </p>
-
-      {/* La advertencia viaja con cada predicción desde la API. Se muestra, no se
-          esconde: es la diferencia entre presentar un resultado y presentarlo con su
-          límite. */}
-      <p className="ctext-xs ctext-muted italic">{prediccion.advertencia}</p>
+          <p className="ctext-xs ctext-muted">
+            Umbral usado: {prediccion.punto_de_operacion.umbral.toFixed(3)} (sensibilidad
+            objetivo{' '}
+            {(prediccion.punto_de_operacion.sensibilidad_objetivo * 100).toFixed(0)} %).
+            {medicion && <> Estimado sobre la toma de {fechaHora(medicion.recorded_at)}.</>}
+          </p>
+          <p className="ctext-xs ctext-muted italic">{prediccion.advertencia}</p>
+        </div>
+      </details>
     </section>
   )
 }

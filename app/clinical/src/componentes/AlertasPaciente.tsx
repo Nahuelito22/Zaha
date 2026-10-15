@@ -108,16 +108,27 @@ export function AlertasPaciente({ patientId }: { patientId: string }) {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
               <ChipRiesgo nivel={a.risk_level} />
               {a.source === 'ml' && <span className="predict">estimación</span>}
-              <span className="ctext-sm">{a.message}</span>
+              {/* El `message` de la base dice "NEWS2 15 - riesgo Alto", y la
+                  mitad de eso ya la dice el chip que está al lado. Se arma el
+                  texto con el puntaje estructurado en vez de recortar la
+                  cadena: parsear un texto que genera un trigger es frágil, y
+                  este dato ya viene en su propia columna. */}
+              <span className="ctext-sm">
+                {a.news2_score !== null ? `NEWS2 ${a.news2_score}` : a.message}
+              </span>
               <span className="staleness">{fechaHora(a.triggered_at)}</span>
             </div>
 
             {/* Una alerta que VUELVE no es lo mismo que una que nunca se miró: sin
-                esto, posponer se parecería a que no pasó nada. */}
+                esto, posponer se parecería a que no pasó nada. Una línea alcanza
+                —antes eran dos oraciones, y la segunda repetía lo que la primera
+                ya implicaba—. El separador va en medio y no un punto al final:
+                `fechaHora` ya termina en "p. m.", y el punto extra producía
+                "12:46 a. m..". */}
             {a.fue_pospuesta && (
               <p className="ctext-xs ctext-muted">
-                Pospuesta hasta {a.postponed_until ? fechaHora(a.postponed_until) : '—'}.
-                El plazo venció y volvió a la cola.
+                Pospuesta hasta{' '}
+                {a.postponed_until ? fechaHora(a.postponed_until) : '—'} · el plazo venció
               </p>
             )}
 
@@ -140,10 +151,13 @@ export function AlertasPaciente({ patientId }: { patientId: string }) {
         ))}
       </ul>
 
-      <p className="ctext-xs ctext-muted">
-        Cada acuse queda firmado y registrado en la bitácora de auditoría, que no admite
-        modificación ni borrado.
-      </p>
+      {/* Acá iba «Cada acuse queda firmado y registrado en la bitácora de
+          auditoría, que no admite modificación ni borrado». Sigue siendo
+          cierto y sigue siendo importante, pero es una propiedad del sistema
+          que se explica una vez —en la capacitación, en la landing, en la
+          documentación— y no un dato que haga falta releer debajo de cada
+          lista de alertas. Lo que cambia por paciente son las alertas; esa
+          frase no cambiaba nunca. */}
     </section>
   )
 }
