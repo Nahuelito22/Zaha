@@ -10,11 +10,14 @@ import {
 import { ChipRiesgo, antiguedad } from '../componentes/ChipRiesgo'
 import { useAhora } from '../lib/reloj'
 
+// Sin `mrn`: la sala identifica por cama y por nombre. El número de historia
+// clínica se dejó de mostrar y, por lo tanto, se dejó de pedir — traer un dato
+// que nadie usa es ruido en la consulta y en el tipo. Está en el detalle del
+// paciente, que es donde hace falta.
 type Cama = {
   encounter_id: string
   bed: string | null
   paciente: string
-  mrn: string
   news2_score: number | null
   risk_level: NivelRiesgo | null
   recorded_at: string
@@ -25,7 +28,7 @@ type FilaCruda = {
   news2_score: number | null
   risk_level: NivelRiesgo | null
   recorded_at: string
-  patients: { first_name: string; last_name: string; mrn: string } | null
+  patients: { first_name: string; last_name: string } | null
   encounters: { bed: string | null } | null
 }
 
@@ -41,7 +44,7 @@ export function Sala() {
     const { data, error } = await supabase
       .from('vital_records_vigentes')
       .select(
-        'encounter_id, news2_score, risk_level, recorded_at, patients(first_name, last_name, mrn), encounters(bed)',
+        'encounter_id, news2_score, risk_level, recorded_at, patients(first_name, last_name), encounters(bed)',
       )
       .order('recorded_at', { ascending: false })
 
@@ -61,7 +64,6 @@ export function Sala() {
         paciente: cruda.patients
           ? `${cruda.patients.last_name}, ${cruda.patients.first_name}`
           : '—',
-        mrn: cruda.patients?.mrn ?? '',
         news2_score: cruda.news2_score,
         risk_level: cruda.risk_level,
         recorded_at: cruda.recorded_at,
@@ -173,41 +175,68 @@ export function Sala() {
                   : 'score-incomplete'
               }`}
             >
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                <span className="col-num ctext w-14 shrink-0 font-bold">
-                  {c.bed ?? '—'}
-                </span>
+              {/* TRES FILAS, Y EL ORDEN NO ES CASUAL.
+                  Antes era una sola fila con `flex-wrap`, y en un teléfono el
+                  nombre competía por el ancho con el puntaje, el chip y el
+                  botón: quedaba truncado en «Funes, …», que es justo el dato
+                  que el enfermero necesita leer entero para saber a quién está
+                  por atender. */}
+              <div className="flex flex-col gap-2">
+                {/* Lo que se escanea de un vistazo, en una línea. */}
+                <div className="flex items-center gap-x-3">
+                  <span className="col-num ctext w-14 shrink-0 font-bold">
+                    {c.bed ?? '—'}
+                  </span>
 
-                <span className="min-w-0 flex-1">
+                  <span className="ml-auto flex items-baseline gap-1">
+                    <span className="vital-value">{c.news2_score ?? '—'}</span>
+                    <span className="vital-unit">NEWS2</span>
+                  </span>
+
+                  <ChipRiesgo nivel={c.risk_level} />
+                </div>
+
+                {/* El nombre, en su propia línea y SIN truncar: si no entra,
+                    baja a dos renglones. Ya no lleva el número de historia
+                    clínica: en la sala la cama identifica sola, y ese número
+                    largo le robaba el ancho al nombre. Sigue estando en el
+                    detalle del paciente, a un toque de acá. */}
+                <div className="min-w-0">
                   <Link
                     to={`/paciente/${c.encounter_id}`}
-                    className="ctext-lead block truncate font-semibold"
+                    className="ctext-lead block font-semibold"
                   >
                     {c.paciente}
                   </Link>
                   <span className="ctext-2xs ctext-muted">
-                    {c.mrn} ·{' '}
                     <span
                       className={`staleness${edad.vieja ? ' staleness-overdue' : ''}`}
                     >
                       {edad.texto}
                     </span>
                   </span>
-                </span>
+                </div>
 
-                <span className="flex items-baseline gap-1">
-                  <span className="vital-value">{c.news2_score ?? '—'}</span>
-                  <span className="vital-unit">NEWS2</span>
-                </span>
-
-                <ChipRiesgo nivel={c.risk_level} />
-
-                <Link
-                  to={`/cargar/${c.encounter_id}`}
-                  className="cbtn cbtn-secondary no-underline"
-                >
-                  Cargar vitales
-                </Link>
+                {/* LA ACCIÓN PRINCIPAL VA A LA DERECHA.
+                    En teléfono y tablet la app se usa de pie al lado de la
+                    cama, sosteniendo el equipo con una mano: el pulgar llega
+                    cómodo al borde derecho y forzado al izquierdo. El hueco que
+                    quedaba libre lo ocupa el acceso al historial, que antes
+                    exigía entrar al detalle y buscarlo. */}
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/paciente/${c.encounter_id}#historial`}
+                    className="cbtn cbtn-secondary no-underline"
+                  >
+                    Historial
+                  </Link>
+                  <Link
+                    to={`/cargar/${c.encounter_id}`}
+                    className="cbtn cbtn-secondary no-underline ml-auto"
+                  >
+                    Cargar vitales
+                  </Link>
+                </div>
               </div>
             </li>
           )
@@ -252,6 +281,9 @@ export function Sala() {
                   >
                     {c.bed ?? '—'}
                   </td>
+                  {/* Sin número de historia clínica, igual que en las
+                      tarjetas: en la sala la cama ya identifica, y el número
+                      aparece en el detalle del paciente. */}
                   <td>
                     <Link
                       to={`/paciente/${c.encounter_id}`}
@@ -259,7 +291,6 @@ export function Sala() {
                     >
                       {c.paciente}
                     </Link>
-                    <span className="ctext-2xs ctext-muted block">{c.mrn}</span>
                   </td>
                   <td
                     className={`col-num${c.risk_level ? '' : ' score-incomplete'}`}
@@ -278,14 +309,28 @@ export function Sala() {
                   </td>
                   <td>
                     {/* Sin `cbtn-sm`: aunque la tabla sea más densa que las
-                        tarjetas, este botón se toca durante la ronda y no puede
-                        bajar de 44 px. Ver design_system/README.md. */}
-                    <Link
-                      to={`/cargar/${c.encounter_id}`}
-                      className="cbtn cbtn-secondary no-underline"
-                    >
-                      Cargar vitales
-                    </Link>
+                        tarjetas, estos botones se tocan durante la ronda y no
+                        pueden bajar de 44 px. Ver design_system/README.md.
+
+                        EL ORDEN ES EL MISMO QUE EN LAS TARJETAS, Y ESO IMPORTA:
+                        `Cargar vitales` va SIEMPRE último, el de más a la
+                        derecha, en las dos vistas. Si cambiara de lugar según el
+                        ancho de la pantalla, el gesto aprendido al pie de una
+                        cama dejaría de servir en el carro del office. */}
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/paciente/${c.encounter_id}#historial`}
+                        className="cbtn cbtn-secondary no-underline"
+                      >
+                        Historial
+                      </Link>
+                      <Link
+                        to={`/cargar/${c.encounter_id}`}
+                        className="cbtn cbtn-secondary no-underline"
+                      >
+                        Cargar vitales
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               )
