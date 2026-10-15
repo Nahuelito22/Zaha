@@ -25,6 +25,9 @@ Estos valores tienen que seguir siendo los mismos que:
   - los CHECK de la migración `20260521000000`
   - `RANGOS` en `app/clinical/src/lib/tipos.ts`
   - `RANGOS_PLAUSIBLES` tal como la usa `src/data/mimic_ed.py`
+  - los min/max del formulario de demostración de la landing
+    (`app/landing/src/components/DemoMotor.astro`). Ahí son solo ayuda de
+    interfaz: el que rechaza es la API, y la demo muestra su 422.
 
 `tests/test_api.py::test_los_rangos_de_la_api_son_los_de_la_tuberia` lo hace cumplir del
 lado de Python. Los otros dos lados se verifican a mano al tocar cualquiera de los tres.

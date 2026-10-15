@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css'
+import DemoMotor from '../components/DemoMotor.astro'
 import { ANCHO, ALTO, SIMBOLOS, CENTROS_ESPIRALES } from '../marca/z-simbolos'
 
 // Los cinco símbolos de la Z, en el orden en que se encienden en la intro.
@@ -291,6 +292,18 @@ const capacidades = [
 				</div>
 
 				<p class="pie-figura">Pacientes ficticios, generados para desarrollo.</p>
+
+				<!-- La demostración del motor, al lado del producto: acá es donde
+				     quien visita está mirando qué hace Zaha. -->
+				<div class="probar">
+					<div>
+						<h3>¿Cómo estima el modelo?</h3>
+						<p>Cargá unos signos vitales y mirá la estimación con su explicación, parámetro por parámetro.</p>
+					</div>
+					<button type="button" class="btn btn-primary probar-boton" data-abrir-demo>
+						Probá la estimación
+					</button>
+				</div>
 			</section>
 
 			<!-- ── Cuatro capacidades ────────────────────────────────────── -->
@@ -487,6 +500,7 @@ const capacidades = [
 				Prácticas Profesionalizantes 3, 2026.
 			</p>
 		</footer>
+		<DemoMotor />
 		</div>
 		<div class="escenario-cola" aria-hidden="true"></div>
 		</div>
@@ -814,6 +828,19 @@ const capacidades = [
 			.r-alto      .glifo { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
 
 			.pie-figura { font-size: 13px; color: var(--color-neutral-700); padding-block-start: var(--space-3); }
+
+			.probar {
+				margin-block-start: var(--space-6);
+				display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+				gap: var(--space-4);
+				padding: var(--space-6);
+				border-radius: var(--radius-md);
+				border: 1px dashed var(--color-accent);
+				background: color-mix(in srgb, var(--color-accent) 7%, var(--color-bg));
+			}
+			.probar h3 { margin: 0 0 var(--space-1); font-size: clamp(19px, 1.8vw, 22px); }
+			.probar p { margin: 0; font-size: 15px; color: #4a443c; max-width: 52ch; }
+			.probar-boton { min-height: 46px; padding-inline: 26px; font-size: 16px; }
 
 			/* ═══ Cajas ═════════════════════════════════════════════════════ */
 			/* Columnas explícitas y no `auto-fit`: las cajas son EXACTAMENTE
