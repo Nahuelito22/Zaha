@@ -1,26 +1,40 @@
 # Edge Function `prediccion` (SCRUM-64)
 
-Puente entre la aplicación clínica y el motor de IA. Existe porque **el Space de Hugging
-Face es privado**: su token no puede vivir en el navegador, así que la aplicación llama
-acá y esta función —que corre del lado del servidor— es la única que lo tiene.
+Puente entre la aplicación clínica y el motor de IA.
+
+Nació porque el Space era privado y su token no podía vivir en el navegador. **El
+15/10/2026 el Space pasó a público**, así que el token quedó opcional y esa razón ya no
+aplica. El puente se sostiene por las tres que siempre importaron: la base se consulta con
+el **JWT de quien llama** (RLS, no `service_role`), acá vive la **traducción** del
+vocabulario de la base al del modelo —que es donde se corren las columnas sin que nada
+falle— y acá se decide, en un solo lugar, **qué se le dice a la pantalla cuando el motor
+no está**.
 
 ## Desplegar
 
-Los dos secretos primero. **No van al repositorio ni a `.env` del cliente.**
+El secreto primero. **No va al repositorio ni a `.env` del cliente.**
 
 ```bash
 supabase secrets set ZAHA_API_URL=https://zaha-cdss-inferencia.hf.space/api
-supabase secrets set ZAHA_API_TOKEN=<token de lectura de Hugging Face>
 supabase functions deploy prediccion
 ```
+
+**Mergear el PR no despliega la función.** El código de Supabase vive en este repositorio
+pero se publica aparte, con el comando de arriba; mientras no se corra, en producción
+sigue el código anterior. Costó una confusión: la versión que reporta el panel sube
+aunque el contenido sea el mismo, así que el número de versión no sirve para saber qué
+está corriendo — hay que mirar el `ezbr_sha256` o el código.
 
 > **El `/api` del final no es opcional.** La API vive montada bajo `/api` dentro del
 > servidor de Gradio del Space; sin ese sufijo, esta función pediría `/prediccion` en la
 > raíz y recibiría la pantalla de demostración en vez de JSON. El porqué está en
 > `deploy/hf_space/app.py`.
 
-El token es de la cuenta `Zaha-CDSS` y le alcanza con permiso de **lectura** sobre el
-Space: esta función sólo consulta.
+`ZAHA_API_TOKEN` es **opcional**: sólo hace falta si el Space vuelve a ser privado. Si
+está cargado, la función lo manda; si no, no manda cabecera de autorización. Cuando haga
+falta, es un token de la cuenta `Zaha-CDSS` con permiso de **lectura** sobre el Space —y
+si es *fine-grained*, hay que marcarle explícitamente ese repositorio, porque si no
+Hugging Face responde **404** y el síntoma es idéntico al de una ruta equivocada.
 
 ## Usar
 
@@ -41,7 +55,7 @@ Siempre **200**, con un campo `estado`:
 |---|---|---|
 | `ok` | Hay estimación en `prediccion` | Mostrarla, separada del puntaje NEWS2 |
 | `dormido` | El Space está despertando (503/504, o más de 8 s) | Mostrar sólo NEWS2 |
-| `caido` | El motor no está disponible | Mostrar sólo NEWS2 |
+| `caido` | El motor no está disponible, o contestó algo que no es JSON | Mostrar sólo NEWS2 |
 | `sin_tomas` | El paciente no tiene mediciones vigentes | Mostrar sólo NEWS2 |
 
 Que los tres últimos sean 200 y no un error es deliberado: **para la aplicación, que no

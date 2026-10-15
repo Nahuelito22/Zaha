@@ -1,11 +1,21 @@
 /**
  * Edge Function: estimación de deterioro para un paciente (SCRUM-64).
  *
- * EL PUENTE ENTRE LA APLICACIÓN Y EL MOTOR, Y POR QUÉ HACE FALTA
- * El Space de Hugging Face es **privado**: sólo se llega con un token de escritura de la
- * cuenta Zaha-CDSS. Ese token no puede vivir en el navegador —publicarlo sería regalar el
- * acceso—, así que la aplicación clínica no llama al motor: llama acá, y esta función,
- * que corre del lado del servidor, es la única que tiene el token.
+ * EL PUENTE ENTRE LA APLICACIÓN Y EL MOTOR, Y POR QUÉ SIGUE HACIENDO FALTA
+ * Esta función nació porque el Space era **privado**: su token no podía vivir en el
+ * navegador, y ésta, que corre del lado del servidor, era la única que lo tenía. El
+ * **15/10/2026 el Space pasó a público**, así que esa razón ya no aplica y el token quedó
+ * opcional. El puente se sostiene igual, por las tres razones que siempre fueron las
+ * importantes:
+ *
+ * 1. **RLS.** La base se consulta con el JWT de quien llama, no con la service_role, así
+ *    que las políticas se aplican igual que en el navegador.
+ * 2. **La traducción.** La base habla inglés y el modelo castellano, y ese salto es
+ *    exactamente donde se corren las columnas sin que nada falle (ver `mapeo.ts`).
+ * 3. **La degradación.** Qué se le dice a la pantalla cuando el motor no está se decide
+ *    una sola vez y en un solo lugar, que es acá.
+ *
+ * Volver a privado es volver a cargar el secreto del token. El código no cambia.
  *
  * LO QUE ESTA FUNCIÓN NO HACE
  * - **No calcula NEWS2.** La escala la calcula un trigger de la base y no depende de nada
@@ -23,9 +33,10 @@
  * entrar. Así que se manda la última toma vigente, y la parte temporal sigue colgando de
  * SCRUM-57, que depende de datos que todavía no tenemos.
  *
- * Secretos que necesita:
- *   ZAHA_API_URL    https://zaha-cdss-inferencia.hf.space/api
- *   ZAHA_API_TOKEN  token de Hugging Face con acceso de LECTURA al Space privado
+ * Secretos:
+ *   ZAHA_API_URL    https://zaha-cdss-inferencia.hf.space/api  — obligatorio
+ *   ZAHA_API_TOKEN  token de Hugging Face con acceso de LECTURA — **opcional** desde que
+ *                   el Space es público. Si está cargado se manda; si no, no se manda.
  *
  * **El `/api` del final no es opcional.** La API vive montada bajo `/api` dentro del
  * servidor de Gradio del Space, porque ZeroGPU obliga a que el servidor lo levante Gradio
@@ -90,11 +101,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!autorizacion) return responder({ error: "falta la cabecera Authorization" }, 401);
 
   const urlDelMotor = Deno.env.get("ZAHA_API_URL");
+  // OPCIONAL desde que el Space es publico. Exigirlo apagaria el motor por un secreto que
+  // ya no hace falta; mandarlo igual cuando esta cargado hace que volver a privado sea
+  // cargar el secreto otra vez, sin tocar una linea de esto.
   const tokenDelMotor = Deno.env.get("ZAHA_API_TOKEN");
-  if (!urlDelMotor || !tokenDelMotor) {
+  if (!urlDelMotor) {
     // Es un error de configuracion, no del motor. Se distingue para que no parezca que
     // el Space esta caido cuando lo que falta es un secreto.
-    console.error("faltan ZAHA_API_URL o ZAHA_API_TOKEN en los secretos");
+    console.error("falta ZAHA_API_URL en los secretos");
     return degradado("caido");
   }
 
@@ -165,7 +179,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       headers: {
         "Content-Type": "application/json",
         // El token NUNCA se registra. Si esto aparece en un log, es una filtracion.
-        Authorization: `Bearer ${tokenDelMotor}`,
+        ...(tokenDelMotor ? { Authorization: `Bearer ${tokenDelMotor}` } : {}),
       },
       body: JSON.stringify({
         observacion,
