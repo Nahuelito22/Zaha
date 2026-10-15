@@ -29,7 +29,8 @@ plt.rcParams.update({
 SOLO = set(sys.argv[1:])  # p.ej. `python burndown.py burndown_sprint3.png`
 
 
-def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=None):
+def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=None,
+            ancho=9.5):
     if SOLO and archivo not in SOLO:
         return
     """dias: lista de date (habiles). real: puntos restantes, puede ser mas corta que dias."""
@@ -37,7 +38,10 @@ def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=
     x = list(range(n))
     ideal = [total * (1 - i / (n - 1)) for i in range(n)]
 
-    fig, ax = plt.subplots(figsize=(9.5, 4.8))
+    # `ancho` existe por el Sprint 5: con 15 dias habiles las etiquetas del eje X se
+    # pisan al ancho por defecto. Ojo tambien con el largo de `nota`: tight_layout le
+    # hace lugar ENCOGIENDO los ejes, asi que un pie largo achica el grafico.
+    fig, ax = plt.subplots(figsize=(ancho, 4.8))
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -143,3 +147,25 @@ dibujar("Sprint 4 — Modelado", "burndown_sprint4.png", d4, r4, 75,
         nota="Los 17 puntos que quedan arriba no son trabajo pendiente de hacer: son "
              "SCRUM-49 y 51, bloqueadas por la credencial de PhysioNet, y las historias "
              "SCRUM-47 y 70, que se cierran al terminar sus tareas hijas.")
+
+# --- Sprint 5: 13/10 - 02/11, 54 pts en 9 items ----------------------------
+# UNICO SPRINT QUE CIERRA EN CERO, y lo hace al tercer dia de una ventana de tres
+# semanas. No es un error del grafico: el alcance comprometido se completo el 15/10.
+#
+# La ventana arranca el 13/10 y no el 20/10 como estaba planificada, porque ese es el
+# dia en que empezo el trabajo real segun el historial de git. Se corrigio en Jira.
+#
+# El reparto por dia NO esta construido: sale de los commits a main.
+#   13/10  SCRUM-62 (8) API FastAPI + onnxruntime, 64 (5) Edge Function,
+#          65 (5) degradacion elegante, 66 (5) explicabilidad          -> 23 pts
+#   14/10  SCRUM-63 (8) el Space arrancando de verdad, 67 (5) mostrar la
+#          prediccion, 68 (8) flujo one-click, 73 (5) encuadre SaMD    -> 26 pts
+#   15/10  SCRUM-61 (5) HU-04, que cierra con la verificacion en vivo  ->  5 pts
+d5 = [date(2026, 10, d) for d in (13, 14, 15, 16, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30)] + \
+     [date(2026, 11, 2)]
+r5 = [54, 31, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+dibujar("Sprint 5 — Integración IA", "burndown_sprint5.png", d5, r5, 54,
+        "13/10 – 02/11/2026 · 9 items · 54 puntos · completo",
+        ancho=12.0,
+        nota="El alcance comprometido se completó al tercer día: los cuatro sprints "
+             "anteriores ya habían construido las dos puntas, el motor y la aplicación.")
