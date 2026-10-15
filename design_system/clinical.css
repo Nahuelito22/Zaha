@@ -212,6 +212,38 @@
   font-weight: 600;
 }
 
+/* El bloque que contiene la estimación y su explicación. Mismo violeta y
+   mismo punteado que el chip: el borde discontinuo es la señal NO cromática
+   de que esto no es la escala. Un panel sólido lo haría parecer un dato
+   determinístico más, que es exactamente lo que no es. */
+.zaha-clinical .predict-panel {
+  border: 1px dashed var(--c-predict);
+  background: var(--c-predict-bg);
+  border-radius: var(--cr-md);
+  padding: var(--cs-4);
+}
+
+/* Una contribución del desglose de la predicción. El ancho fijo de la barra
+   evita que un parámetro con nombre largo desalinee la columna. */
+.zaha-clinical .predict-contrib {
+  display: flex;
+  align-items: center;
+  gap: var(--cs-3);
+  font-size: 13px;
+}
+.zaha-clinical .predict-contrib .predict-barra {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-predict);
+  min-width: 2px;
+}
+/* Lo que EMPUJA hacia la alerta va lleno; lo que la ALEJA va hueco. Dos
+   direcciones opuestas no pueden distinguirse sólo por color. */
+.zaha-clinical .predict-contrib .predict-barra-reduce {
+  background: transparent;
+  border: 1px solid var(--c-predict);
+}
+
 /* ── Valores de vitales ──────────────────────────────────────────────── */
 .zaha-clinical .vital-value {
   font-family: var(--font-numeric);

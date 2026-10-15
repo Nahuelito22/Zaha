@@ -14,7 +14,10 @@ import assert from 'node:assert/strict'
 import {
   crearServicioPrediccion,
   depurarExplicacion,
+  ETIQUETA_PARAMETRO,
+  PARAMETROS_NO_ACCIONABLES,
   PAUSA_TRAS_FALLO_MS,
+  separarContribuciones,
   type Prediccion,
   type RespuestaDeLaFuncion,
 } from './prediccion.ts'
@@ -270,4 +273,50 @@ test('la predicción que llega por el servicio ya viene depurada', async () => {
 
   if (r.estado !== 'ok') throw new Error(`esperaba ok, vino ${r.estado}`)
   assert.equal(r.prediccion.explicacion, null)
+})
+
+// -- separación de contribuciones (SCRUM-67) --------------------------------------------
+
+const CONTRIBS = [
+  { parametro: 'confusion', valor: 1, contribucion: 1.066, direccion: 'aumenta' as const },
+  { parametro: 'edad', valor: 81, contribucion: 0.8368, direccion: 'aumenta' as const },
+  { parametro: 'temperatura', valor: 38.4, contribucion: 0.6877, direccion: 'aumenta' as const },
+  { parametro: 'spo2', valor: 99, contribucion: -0.21, direccion: 'reduce' as const },
+]
+
+test('la edad se separa: es el segundo contribuyente y no es accionable', () => {
+  assert.ok(PARAMETROS_NO_ACCIONABLES.has('edad'))
+  const { accionables, deBase } = separarContribuciones(CONTRIBS)
+  assert.deepEqual(deBase.map((c) => c.parametro), ['edad'])
+  assert.ok(!accionables.some((c) => c.parametro === 'edad'))
+})
+
+test('no se pierde ninguna contribución al separar', () => {
+  const { accionables, deBase } = separarContribuciones(CONTRIBS)
+  assert.equal(accionables.length + deBase.length, CONTRIBS.length)
+})
+
+test('se conserva el orden por magnitud que ya trae la API', () => {
+  const { accionables } = separarContribuciones(CONTRIBS)
+  assert.deepEqual(
+    accionables.map((c) => c.parametro),
+    ['confusion', 'temperatura', 'spo2'],
+  )
+})
+
+test('una lista vacía no rompe', () => {
+  const { accionables, deBase } = separarContribuciones([])
+  assert.equal(accionables.length, 0)
+  assert.equal(deBase.length, 0)
+})
+
+test('todos los parámetros del modelo tienen etiqueta clínica', () => {
+  // Si el modelo incorpora una feature nueva y nadie le pone nombre, la pantalla
+  // mostraria `presion_sistolica` crudo al pie de una cama.
+  for (const c of CONTRIBS) {
+    assert.ok(ETIQUETA_PARAMETRO[c.parametro], `falta etiqueta para ${c.parametro}`)
+  }
+  for (const p of PREDICCION.explicacion!.contribuciones) {
+    assert.ok(ETIQUETA_PARAMETRO[p.parametro], `falta etiqueta para ${p.parametro}`)
+  }
 })

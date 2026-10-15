@@ -7,9 +7,11 @@ import {
   type VitalDesglose,
 } from '../lib/tipos'
 import { ChipRiesgo, antiguedad } from '../componentes/ChipRiesgo'
+import { Prediccion } from '../componentes/Prediccion'
 
 type Episodio = {
   id: string
+  patient_id: string
   bed: string | null
   ward: string
   spo2_scale: number
@@ -42,7 +44,7 @@ export function DetallePaciente() {
       const [ep, vr] = await Promise.all([
         supabase
           .from('encounters')
-          .select('id, bed, ward, spo2_scale, patients(first_name, last_name, mrn)')
+          .select('id, patient_id, bed, ward, spo2_scale, patients(first_name, last_name, mrn)')
           .eq('id', encounterId)
           .maybeSingle(),
         // Se lee el historial COMPLETO, enmendadas incluidas: ver el dato
@@ -105,6 +107,10 @@ export function DetallePaciente() {
         <>
           <Vigente toma={actual} escalaEpisodio={episodio.spo2_scale} />
           <Desglose toma={actual} />
+          {/* Va DESPUES del desglose, no al lado del score: primero la escala
+              validada, despues el agregado opcional. Si no hay estimacion, este
+              bloque se reduce a una linea y nada mas cambia (ADR-004). */}
+          <Prediccion key={episodio.patient_id} patientId={episodio.patient_id} />
         </>
       )}
 
