@@ -44,6 +44,18 @@ const capacidades = [
     texto: 'Cada fila dice hace cuánto se tomó ese dato.',
     icono: '<path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/>',
   },
+  // Las dos del Sprint 5. La landing describía el producto de septiembre y se
+  // había quedado sin la mitad que lo distingue.
+  {
+    titulo: 'Estimación del modelo',
+    texto: 'Aparte de la escala, con qué parámetro pesó en cada caso.',
+    icono: '<path d="M3 17l5-5 4 3 6-7"/><path d="M21 8h-3V5"/>',
+  },
+  {
+    titulo: 'Un clic, y queda firmado',
+    texto: 'Validar o posponer una alerta, con el acuse en la bitácora.',
+    icono: '<path d="M20 6L9 17l-5-5"/>',
+  },
 ]
 ---
 
@@ -170,7 +182,9 @@ const capacidades = [
 			</section>
 
 			<!-- ── Tecnología ───────────────────────────────────────────── -->
-			<section class="env angosta" id="tecnologia" aria-labelledby="h-tecnologia">
+			<section class="env" id="tecnologia" aria-labelledby="h-tecnologia">
+				<div class="duo">
+				<div class="angosta">
 				<h2 id="h-tecnologia">Cómo está construido</h2>
 				<p class="pila">
 					<span class="tag tag-neutral">React</span>
@@ -188,29 +202,128 @@ const capacidades = [
 					el que se cargó la medición.
 				</p>
 				<p>
-					<strong>Lo que todavía no está:</strong> el motor de aprendizaje automático
-					que analiza la tendencia para anticipar un deterioro antes de que la escala
-					lo marque. Hoy funciona la tubería de datos y el cálculo determinístico.
+					<strong>El motor predictivo ya está integrado.</strong> Una regresión
+					logística sobre los mismos siete parámetros corre como servicio aparte y
+					devuelve, junto a la estimación, cuánto aportó cada parámetro. La
+					aplicación la muestra separada de la escala, y si ese servicio no responde
+					el puntaje NEWS2 sigue funcionando igual: nunca depende de él.
 				</p>
+				<p>
+					<strong>Lo que todavía no está demostrado</strong> es que el modelo reduzca
+					la cantidad de alertas frente a NEWS2. La reducción estimada ronda el 30 %,
+					pero su intervalo de confianza del 95 % incluye el cero: el resultado es
+					consistente con la hipótesis y no concluyente. Tampoco está el análisis de
+					tendencia sobre series temporales, que depende de datos que el proyecto
+					todavía no consiguió.
+				</p>
+				</div>
+
+				{/* La columna derecha no es decoración: es la explicación del modelo,
+				    que es justo lo que se sacó de la pantalla clínica por ocupar
+				    demasiado en una ronda. Acá no estorba y es lo que distingue al
+				    proyecto de una calculadora. Replica el panel real —violeta,
+				    borde punteado, fuera de la escala cromática de NEWS2— con los
+				    valores de un caso del seed. */}
+				<aside class="predict-demo" aria-label="Ejemplo de estimación del modelo">
+					<div class="predict-demo-cab">
+						<strong>Estimación del modelo</strong>
+						<span class="predict-pill">alerta · 99,4 %</span>
+					</div>
+					<p class="predict-demo-razon">
+						Pesan sobre todo <strong>frecuencia respiratoria</strong> y
+						<strong>confusión nueva</strong>.
+					</p>
+					<ul class="predict-demo-lista" role="list">
+						{[
+							{ p: 'Frecuencia respiratoria', v: '80', ancho: 100, acerca: true },
+							{ p: 'Confusión nueva', v: '1', ancho: 62, acerca: true },
+							{ p: 'Presión sistólica', v: '280', ancho: 48, acerca: false },
+							{ p: 'Temperatura', v: '35', ancho: 34, acerca: false },
+						].map((c) => (
+							<li>
+								<span>{c.p}</span>
+								<span class="predict-demo-val">{c.v}</span>
+								<span class={c.acerca ? 'predict-barra' : 'predict-barra hueca'} style={`width:${c.ancho}%`} aria-hidden="true"></span>
+								<span class="predict-demo-dir">{c.acerca ? 'acerca' : 'aleja'}</span>
+							</li>
+						))}
+					</ul>
+					<a class="enlace" href="https://zaha-cdss-inferencia.hf.space/" target="_blank" rel="noopener">
+						Probar el modelo con valores propios →
+					</a>
+					<p class="predict-demo-pie">
+						Caso ficticio. La reducción de alertas frente a NEWS2 todavía no está
+						demostrada.
+					</p>
+				</aside>
+				</div>
 			</section>
 
 			<!-- ── Datos y créditos ─────────────────────────────────────── -->
-			<section class="env angosta" id="datos" aria-labelledby="h-datos">
+			<section class="env" id="datos" aria-labelledby="h-datos">
+				<div class="duo">
+				<div class="angosta">
 				<h2 id="h-datos">Datos y créditos</h2>
 				<p>
 					<strong>NEWS2</strong> es una escala publicada por el Royal College of
 					Physicians del Reino Unido. Zaha implementa su cálculo; la escala no es obra
 					de este proyecto.
 				</p>
-				<p>El trabajo de modelado se apoya en <strong>MIMIC-IV-ED</strong>, que se cita como exige su licencia:</p>
+				<p>
+					El trabajo de modelado se apoya en <strong>dos cohortes abiertas</strong>, y
+					cada una respondió una pregunta distinta.
+				</p>
+				<p>
+					El <strong>modelo se entrenó con la cohorte del estudio TRIAGE</strong>:
+					1.303 pacientes adultos de guardia de tres centros, con mortalidad a 30 días
+					como desenlace. Es la única de las dos donde la comparación contra NEWS2 es
+					medible, porque tiene un desenlace real con prevalencia real.
+				</p>
+				<blockquote class="cita">
+					Cohorte del estudio TRIAGE. Zenodo, registro 4963759. Dedicada al dominio
+					público bajo CC0 1.0.
+				</blockquote>
+				<p>
+					<strong>MIMIC-IV-ED Demo</strong> se usó para reproducir el comportamiento de
+					NEWS2 y medir su tasa de alertas de referencia. Se cita como exige su
+					licencia:
+				</p>
 				<blockquote class="cita">
 					Johnson, A., Bulgarelli, L., Pollard, T., Celi, L. A., Mark, R., &amp;
 					Horng, S. (2023). <em>MIMIC-IV-ED Demo</em> (version 2.2). PhysioNet.
 				</blockquote>
 				<p class="text-muted">
-					Distribuido bajo Open Database License (ODbL) v1.0, que obliga a atribuir la
-					fuente.
+					MIMIC-IV-ED Demo se distribuye bajo Open Database License (ODbL) v1.0, que
+					obliga a atribuir la fuente. CC0 no exige atribución; la de TRIAGE se incluye
+					igual, porque no citar lo que se usó sería una omisión aunque la licencia lo
+					permita.
 				</p>
+				</div>
+
+				{/* La ficha de la derecha dice de un vistazo lo que el texto explica:
+				    qué cohorte, de qué tamaño, con qué licencia y para qué se usó.
+				    Que el reparto de tareas entre las dos esté a la vista es parte
+				    del argumento, no un adorno. */}
+				<aside class="ficha" aria-label="Resumen de las cohortes usadas">
+					<h3>Las dos cohortes</h3>
+					<dl>
+						<div>
+							<dt>TRIAGE <span class="ficha-lic">CC0</span></dt>
+							<dd>1.303 pacientes de guardia · 3 centros · mortalidad a 30 días</dd>
+							<dd class="ficha-uso">Entrenamiento del modelo y comparación contra NEWS2</dd>
+						</div>
+						<div>
+							<dt>MIMIC-IV-ED Demo <span class="ficha-lic">ODbL 1.0</span></dt>
+							<dd>Episodios de guardia · estadía mediana 5,8 h</dd>
+							<dd class="ficha-uso">Tasa de alertas de referencia de NEWS2</dd>
+						</div>
+					</dl>
+					<p class="ficha-nota">
+						Ninguna contiene datos de pacientes argentinos. Generalizar a otra
+						población es una limitación declarada, no un resultado.
+					</p>
+				</aside>
+				</div>
 			</section>
 
 			<section class="env angosta" aria-labelledby="h-aviso">
@@ -309,6 +422,17 @@ const capacidades = [
 				border: 1px solid var(--color-accent-400);
 			}
 
+			/* Enlace dentro de un párrafo. Usa el paso -700 y no --color-accent,
+			   por la regla de contraste del encabezado de este archivo: el
+			   terracota da 3.03:1 sobre el crema y no alcanza para texto. El
+			   subrayado se mantiene: el color solo no puede ser lo único que
+			   distinga un enlace de una palabra en negrita. */
+			.enlace {
+				color: var(--color-accent-700);
+				text-decoration: underline;
+				text-underline-offset: 3px;
+			}
+
 			/* ═══ Tablero ═══════════════════════════════════════════════════
 			   Neutros fríos: es la pantalla clínica, no territorio de marca. */
 			#producto { padding-block-start: 0; }
@@ -382,8 +506,10 @@ const capacidades = [
 
 			/* ═══ Cajas ═════════════════════════════════════════════════════ */
 			/* Columnas explícitas y no `auto-fit`: las cajas son EXACTAMENTE
-			   cuatro, y auto-fit abría una quinta pista a partir de 1280px.
-			   2×2 en teléfono y tablet, una fila de cuatro en escritorio. */
+			   seis —eran cuatro hasta que el Sprint 5 agregó la estimación y el
+			   acuse—, y auto-fit abría pistas de más en pantallas anchas.
+			   2×3 en teléfono y tablet, 3×2 en escritorio. Con cuatro columnas
+			   quedaría una última fila de dos, descolgada. */
 			.cajas {
 				display: grid; gap: var(--space-4);
 				grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -410,6 +536,74 @@ const capacidades = [
 			.franja h2 { font-size: clamp(24px, 2.4vw, 30px); margin: 0 0 var(--space-2); }
 			.franja p { font-size: 16px; line-height: 1.55; color: #4a443c; max-width: 58ch; }
 			.escudo { flex: none; }
+
+			/* ═══ Dos columnas ══════════════════════════════════════════════
+			   `angosta` limita el texto a 68ch porque un renglón más largo se
+			   lee mal. En un envase de 1264px eso dejaba media sección en
+			   blanco, y se notaba. La solución no es ensanchar el texto
+			   —empeoraría la lectura— sino ocupar el hueco con algo que valga
+			   la pena mirar. Apilado hasta 900px: en un teléfono dos columnas
+			   de 180px no son columnas. */
+			.duo { display: grid; gap: var(--space-6); align-items: start; }
+			@media (min-width: 900px) {
+				.duo {
+					grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+					gap: calc(var(--space-8) * 1.2);
+				}
+			}
+
+			/* ═══ Demostración de la estimación ═════════════════════════════
+			   Replica el panel real de la aplicación: violeta y borde
+			   punteado, FUERA de la escala cromática de NEWS2, donde el rojo,
+			   el ámbar y el verde están reservados a los niveles de riesgo. El
+			   punteado es la señal que no depende del color. */
+			.predict-demo {
+				border: 1px dashed #5b3d9e;
+				background: #f0ebfa;
+				border-radius: var(--radius-md);
+				padding: var(--space-6);
+				display: flex; flex-direction: column; gap: var(--space-3);
+			}
+			.predict-demo-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+			.predict-demo-cab strong { font-size: 18px; color: var(--color-text); }
+			.predict-pill {
+				border: 1px dashed #5b3d9e; color: #5b3d9e;
+				border-radius: var(--radius-sm); padding: 3px 10px;
+				font-size: 12px; font-weight: 600;
+			}
+			.predict-demo-razon { font-size: 15px; line-height: 1.5; margin: 0; }
+			.predict-demo-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+			.predict-demo-lista li {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto 96px 52px;
+				align-items: center; gap: var(--space-2);
+				font-size: 13px;
+			}
+			.predict-demo-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+			.predict-barra { height: 6px; border-radius: 3px; background: #5b3d9e; }
+			/* Lo que ALEJA de la alerta va hueco: dos direcciones opuestas no
+			   pueden distinguirse sólo por color. Misma regla que en la app. */
+			.predict-barra.hueca { background: transparent; border: 1px solid #5b3d9e; }
+			.predict-demo-dir { font-size: 12px; color: #5f5a56; text-align: right; }
+			.predict-demo-pie { font-size: 12px; color: #5f5a56; margin: 0; line-height: 1.5; }
+
+			/* ═══ Ficha de cohortes ═════════════════════════════════════════ */
+			.ficha {
+				background: var(--color-surface);
+				border-radius: var(--radius-md);
+				padding: var(--space-6);
+			}
+			.ficha h3 { margin: 0 0 var(--space-4); font-size: 18px; }
+			.ficha dl { margin: 0; display: flex; flex-direction: column; gap: var(--space-4); }
+			.ficha dt { font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+			.ficha dd { margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: #4a443c; }
+			.ficha-lic {
+				font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+				border: 1px solid var(--color-accent-400); color: var(--color-accent-700);
+				border-radius: var(--radius-sm); padding: 2px 8px;
+			}
+			.ficha-uso { color: var(--color-accent-700); font-weight: 600; }
+			.ficha-nota { margin: var(--space-4) 0 0; font-size: 13px; line-height: 1.55; color: #5f5a56; }
 
 			/* ═══ Texto largo ═══════════════════════════════════════════════ */
 			.angosta h2 { margin-block-end: var(--space-4); }
@@ -465,7 +659,7 @@ const capacidades = [
 				.celda-nivel { text-align: right; }
 				.chip { font-size: 13px; padding: 4px 11px; }
 				.glifo { width: 11px; height: 11px; }
-				.cajas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+				.cajas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 			}
 
 			@media (max-width: 1023px) {
