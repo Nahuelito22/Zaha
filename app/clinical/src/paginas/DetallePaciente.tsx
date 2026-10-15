@@ -8,6 +8,7 @@ import {
 } from '../lib/tipos'
 import { ChipRiesgo, antiguedad } from '../componentes/ChipRiesgo'
 import { Prediccion } from '../componentes/Prediccion'
+import { AlertasPaciente } from '../componentes/AlertasPaciente'
 
 type Episodio = {
   id: string
@@ -113,6 +114,9 @@ export function DetallePaciente() {
           <Prediccion key={episodio.patient_id} patientId={episodio.patient_id} />
         </>
       )}
+
+      {/* Antes del historial: lo que hay que ATENDER va arriba de lo que ya paso. */}
+      <AlertasPaciente patientId={episodio.patient_id} />
 
       <Historial tomas={tomas} />
 
