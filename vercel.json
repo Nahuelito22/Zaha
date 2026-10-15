@@ -5,6 +5,10 @@
   "buildCommand": "npm run build --prefix app/landing && npm run build --prefix app/clinical && rm -rf dist && cp -r app/landing/dist dist && cp -r app/clinical/dist dist/app",
   "outputDirectory": "dist",
   "rewrites": [
+    {
+      "source": "/api/motor/:path*",
+      "destination": "https://zaha-cdss-inferencia.hf.space/api/:path*"
+    },
     { "source": "/app/:path*", "destination": "/app/index.html" }
   ],
   "headers": [

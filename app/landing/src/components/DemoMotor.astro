@@ -1,0 +1,457 @@
+---
+// Demostración del motor de IA dentro de la landing (SCRUM-84).
+//
+// Es el mismo formulario que el Space de Hugging Face, con el diseño de Zaha:
+// quien visita carga signos vitales y ve la estimación con su explicación.
+// Cualquier botón con `data-abrir-demo` la abre.
+//
+// QUÉ MUESTRA Y QUÉ NO
+// Solo la estimación del modelo, nunca NEWS2. La API no calcula la escala a
+// propósito (la escala vive en la base, como fuente única), y duplicarla acá
+// sería una tercera copia que algún día deja de coincidir. Se presenta igual
+// que en la app clínica (componentes/Prediccion.tsx): violeta con borde
+// punteado, "no es NEWS2", la edad aparte, y sin explicación si no
+// reconstruye la probabilidad.
+//
+// LOS RANGOS
+// Los min/max de los campos son los de ml_engine/src/rangos.py, que es la
+// fuente de verdad: ahí está anotada esta copia. Igual el que decide es la API,
+// que devuelve 422 con el campo y el límite, y eso es lo que se muestra.
+
+const campos = [
+	{ id: 'frecuencia_respiratoria', etiqueta: 'Frecuencia respiratoria', unidad: 'rpm', min: 0, max: 80, paso: 1, valor: 20 },
+	{ id: 'spo2', etiqueta: 'Saturación de oxígeno', unidad: '%', min: 50, max: 100, paso: 1, valor: 96 },
+	{ id: 'temperatura', etiqueta: 'Temperatura', unidad: '°C', min: 25, max: 45, paso: 0.1, valor: 36.6 },
+	{ id: 'presion_sistolica', etiqueta: 'Presión sistólica', unidad: 'mmHg', min: 30, max: 300, paso: 1, valor: 130 },
+	{ id: 'frecuencia_cardiaca', etiqueta: 'Frecuencia cardíaca', unidad: 'lpm', min: 0, max: 300, paso: 1, valor: 78 },
+	{ id: 'edad', etiqueta: 'Edad', unidad: 'años', min: 0, max: 120, paso: 1, valor: 65 },
+]
+---
+
+<dialog class="demo-motor" aria-labelledby="demo-titulo" data-demo>
+	<div class="demo-cabeza">
+		<div>
+			<h2 id="demo-titulo">Probá la estimación</h2>
+			<p class="demo-sub">
+				Cargá una toma de signos vitales y mirá qué estima el modelo y por qué.
+			</p>
+		</div>
+		<button type="button" class="demo-cerrar" data-cerrar aria-label="Cerrar">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+		</button>
+	</div>
+
+	<div class="demo-cuerpo">
+		<form class="demo-form" data-form novalidate>
+			<div class="demo-ejemplos" role="group" aria-label="Cargar un ejemplo">
+				<span>Ejemplos:</span>
+				<button type="button" class="demo-chip" data-ejemplo="estable">Paciente estable</button>
+				<button type="button" class="demo-chip" data-ejemplo="empeora">Paciente que empeora</button>
+			</div>
+
+			<div class="demo-grilla">
+				{campos.map((c) => (
+					<label class="demo-campo">
+						<span>{c.etiqueta} <small>({c.unidad})</small></span>
+						<input
+							type="number"
+							name={c.id}
+							inputmode="decimal"
+							min={c.min}
+							max={c.max}
+							step={c.paso}
+							value={c.valor}
+							required
+						/>
+					</label>
+				))}
+			</div>
+
+			<label class="demo-check">
+				<input type="checkbox" name="confusion" />
+				<span>
+					Confusión <strong>nueva</strong>
+					<small>De aparición reciente, no un deterioro cognitivo previo.</small>
+				</span>
+			</label>
+
+			<button type="submit" class="btn btn-primary demo-enviar" data-enviar>Estimar</button>
+		</form>
+
+		<div class="demo-resultado" data-resultado aria-live="polite">
+			<p class="demo-vacio">El resultado aparece acá.</p>
+		</div>
+	</div>
+
+	<p class="demo-aviso">
+		Demostración con los valores que cargues vos. <strong>No es un dispositivo médico</strong>:
+		no lo uses para decidir sobre personas reales. Los valores no se guardan.
+	</p>
+</dialog>
+
+<script>
+	type Contribucion = {
+		parametro: string
+		valor: number
+		contribucion: number
+		direccion: 'aumenta' | 'reduce' | 'neutro'
+	}
+	type Prediccion = {
+		probabilidad: number
+		alerta: boolean
+		punto_de_operacion: {
+			sensibilidad_objetivo: number
+			umbral: number
+			tasa_de_alertas_esperada: number | null
+		}
+		explicacion: {
+			contribuciones: Contribucion[]
+			reconstruye_la_probabilidad: boolean
+		} | null
+		advertencia: string
+	}
+
+	// Mismo nombre clínico que la app (lib/prediccion.ts).
+	const ETIQUETA: Record<string, string> = {
+		frecuencia_respiratoria: 'Frecuencia respiratoria',
+		spo2: 'Saturación de oxígeno',
+		temperatura: 'Temperatura',
+		presion_sistolica: 'Presión sistólica',
+		frecuencia_cardiaca: 'Frecuencia cardíaca',
+		confusion: 'Confusión nueva',
+		edad: 'Edad',
+	}
+	// La edad no es accionable al pie de la cama: va aparte, como en la app,
+	// para que no se lea "está en riesgo por su edad".
+	const NO_ACCIONABLES = new Set(['edad'])
+
+	const EJEMPLOS: Record<string, Record<string, number | boolean>> = {
+		estable: {
+			frecuencia_respiratoria: 16, spo2: 97, temperatura: 36.7, presion_sistolica: 124,
+			frecuencia_cardiaca: 74, edad: 45, confusion: false,
+		},
+		empeora: {
+			frecuencia_respiratoria: 26, spo2: 91, temperatura: 38.6, presion_sistolica: 96,
+			frecuencia_cardiaca: 118, edad: 74, confusion: true,
+		},
+	}
+
+	// Un Space gratuito dormido tarda del orden de medio minuto en despertar.
+	const ESPERA_MAXIMA_MS = 90_000
+	const AVISO_DESPERTANDO_MS = 4_000
+
+	const dialogo = document.querySelector<HTMLDialogElement>('[data-demo]')
+	const form = dialogo?.querySelector<HTMLFormElement>('[data-form]')
+	const salida = dialogo?.querySelector<HTMLElement>('[data-resultado]')
+	const enviar = dialogo?.querySelector<HTMLButtonElement>('[data-enviar]')
+
+	const pct = (x: number, dec = 1) =>
+		`${(x * 100).toLocaleString('es-AR', { minimumFractionDigits: dec, maximumFractionDigits: dec })} %`
+
+	// Todo el texto del resultado se arma con textContent, nunca con innerHTML:
+	// la respuesta viene de un servicio externo.
+	function el<K extends keyof HTMLElementTagNameMap>(tag: K, clase?: string, texto?: string) {
+		const e = document.createElement(tag)
+		if (clase) e.className = clase
+		if (texto !== undefined) e.textContent = texto
+		return e
+	}
+
+	function mostrar(...nodos: Node[]) {
+		salida?.replaceChildren(...nodos)
+	}
+
+	function fila(c: Contribucion, maxima: number) {
+		const li = el('li', 'demo-contrib')
+		li.append(
+			el('span', 'demo-contrib-nombre', ETIQUETA[c.parametro] ?? c.parametro),
+			el(
+				'span',
+				'demo-contrib-valor',
+				c.parametro === 'confusion' ? (c.valor ? 'sí' : 'no') : c.valor.toLocaleString('es-AR'),
+			),
+		)
+		const barra = el('span', `demo-barra${c.direccion === 'reduce' ? ' demo-barra-reduce' : ''}`)
+		barra.style.width = `${Math.max(Math.round((Math.abs(c.contribucion) / maxima) * 100), 3)}%`
+		barra.setAttribute('aria-hidden', 'true')
+		const pista = el('span', 'demo-contrib-pista')
+		pista.append(barra)
+		li.append(pista, el('span', 'demo-contrib-dir', c.direccion === 'reduce' ? 'aleja' : 'acerca'))
+		return li
+	}
+
+	function pintarResultado(p: Prediccion) {
+		const panel = el('section', 'demo-panel')
+
+		const cab = el('div', 'demo-panel-cab')
+		cab.append(
+			el('span', 'demo-chip-ia', `${p.alerta ? 'alerta' : 'sin alerta'} · ${pct(p.probabilidad)}`),
+			el('span', 'demo-no-news2', 'Estimación del modelo · no es NEWS2'),
+		)
+		panel.append(cab)
+
+		// Una explicación que no reconstruye la probabilidad no describe al
+		// modelo que respondió: se descarta y queda solo el número.
+		const exp = p.explicacion?.reconstruye_la_probabilidad ? p.explicacion : null
+		if (!exp) {
+			panel.append(el('p', 'demo-nota', 'La explicación no pudo verificarse contra el modelo, así que no se muestra.'))
+		} else {
+			const accionables = exp.contribuciones.filter((c) => !NO_ACCIONABLES.has(c.parametro))
+			const deBase = exp.contribuciones.filter((c) => NO_ACCIONABLES.has(c.parametro))
+			const maxima = Math.max(...exp.contribuciones.map((c) => Math.abs(c.contribucion)), 0.0001)
+
+			// Solo los que ACERCAN a la alerta: nombrar uno que la aleja sería mentir.
+			const principales = accionables
+				.filter((c) => c.direccion === 'aumenta')
+				.slice(0, 2)
+				.map((c) => (ETIQUETA[c.parametro] ?? c.parametro).toLowerCase())
+			if (principales.length) {
+				const razon = el('p', 'demo-razon', 'Pesan sobre todo ')
+				razon.append(el('strong', undefined, principales.join(' y ')), '.')
+				panel.append(razon)
+			}
+
+			const lista = el('ul', 'demo-lista')
+			accionables.forEach((c) => lista.append(fila(c, maxima)))
+			panel.append(lista)
+
+			if (deBase.length) {
+				panel.append(el('p', 'demo-nota', 'No accionable en esta toma:'))
+				const base = el('ul', 'demo-lista')
+				deBase.forEach((c) => base.append(fila(c, maxima)))
+				panel.append(base)
+			}
+		}
+
+		const punto = p.punto_de_operacion
+		const tasa = punto.tasa_de_alertas_esperada
+		panel.append(
+			el(
+				'p',
+				'demo-nota',
+				`Umbral ${punto.umbral.toFixed(3)} para una sensibilidad objetivo del ${pct(punto.sensibilidad_objetivo, 0)}` +
+					(tasa != null ? `: con ese umbral se espera alertar en el ${pct(tasa)} de las tomas.` : '.'),
+			),
+			el('p', 'demo-advertencia', p.advertencia),
+		)
+		mostrar(panel)
+	}
+
+	// El 422 de la API trae el campo y el límite: se traduce a una frase.
+	function explicar422(cuerpo: unknown): string {
+		const detalle = (cuerpo as { detail?: unknown })?.detail
+		if (Array.isArray(detalle) && detalle.length) {
+			return detalle
+				.map((d: { loc?: string[]; ctx?: { ge?: number; le?: number }; msg?: string }) => {
+					const campo = ETIQUETA[d.loc?.at(-1) ?? ''] ?? d.loc?.at(-1) ?? 'Un valor'
+					if (d.ctx?.ge !== undefined) return `${campo}: tiene que ser al menos ${d.ctx.ge}.`
+					if (d.ctx?.le !== undefined) return `${campo}: tiene que ser como mucho ${d.ctx.le}.`
+					return `${campo}: ${d.msg ?? 'valor inválido'}.`
+				})
+				.join(' ')
+		}
+		return typeof detalle === 'string' ? detalle : 'Algún valor está fuera de rango.'
+	}
+
+	async function estimar() {
+		if (!form || !enviar) return
+		const datos = new FormData(form)
+		const observacion: Record<string, number> = {}
+		for (const [k, v] of datos.entries()) if (k !== 'confusion') observacion[k] = Number(v)
+		observacion.confusion = datos.has('confusion') ? 1 : 0
+
+		const vacios = Object.entries(observacion).filter(([, v]) => Number.isNaN(v))
+		if (vacios.length) {
+			mostrar(el('p', 'demo-error', 'Completá todos los valores.'))
+			return
+		}
+
+		enviar.disabled = true
+		mostrar(el('p', 'demo-vacio', 'Consultando el motor…'))
+		const despertando = setTimeout(
+			() => mostrar(el('p', 'demo-vacio', 'Despertando el motor. Un servidor gratuito se duerme si nadie lo usa; la primera consulta puede tardar hasta un minuto.')),
+			AVISO_DESPERTANDO_MS,
+		)
+		const corte = new AbortController()
+		const limite = setTimeout(() => corte.abort(), ESPERA_MAXIMA_MS)
+
+		try {
+			const r = await fetch('/api/motor/prediccion', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ observacion }),
+				signal: corte.signal,
+			})
+			const cuerpo = await r.json().catch(() => null)
+			if (r.status === 422) mostrar(el('p', 'demo-error', explicar422(cuerpo)))
+			else if (!r.ok || !cuerpo) throw new Error(`HTTP ${r.status}`)
+			else pintarResultado(cuerpo as Prediccion)
+		} catch (e) {
+			console.warn('[zaha] la demostración no obtuvo estimación', e)
+			mostrar(el('p', 'demo-error', 'El motor no respondió. Probá de nuevo en un momento.'))
+		} finally {
+			clearTimeout(despertando)
+			clearTimeout(limite)
+			enviar.disabled = false
+		}
+	}
+
+	if (dialogo && form) {
+		document.querySelectorAll('[data-abrir-demo]').forEach((b) =>
+			b.addEventListener('click', () => {
+				dialogo.showModal()
+				// Despierta el Space apenas se abre el modal, antes de que se
+				// llene el formulario: así la primera estimación no espera tanto.
+				fetch('/api/motor/salud').catch(() => {})
+			}),
+		)
+		dialogo.querySelector('[data-cerrar]')?.addEventListener('click', () => dialogo.close())
+		// Clic en el fondo oscuro: el target es el propio <dialog>.
+		dialogo.addEventListener('click', (e) => {
+			if (e.target === dialogo) dialogo.close()
+		})
+		dialogo.querySelectorAll<HTMLButtonElement>('[data-ejemplo]').forEach((b) =>
+			b.addEventListener('click', () => {
+				const ej = EJEMPLOS[b.dataset.ejemplo ?? '']
+				if (!ej) return
+				for (const [k, v] of Object.entries(ej)) {
+					const campo = form.elements.namedItem(k) as HTMLInputElement | null
+					if (!campo) continue
+					if (campo.type === 'checkbox') campo.checked = Boolean(v)
+					else campo.value = String(v)
+				}
+			}),
+		)
+		form.addEventListener('submit', (e) => {
+			e.preventDefault()
+			void estimar()
+		})
+	}
+</script>
+
+<style is:global>
+	/* Global porque el resultado se arma con JS y no lleva el atributo de
+	   alcance de Astro. Todo cuelga de .demo-motor, así que no se escapa. */
+	.demo-motor {
+		--ia: #5b3d9e;      /* el mismo violeta de la estimación en la app */
+		--ia-fondo: #f0ebfa;
+		width: min(920px, calc(100vw - 24px));
+		max-height: calc(100dvh - 24px);
+		/* El reseteo de Tailwind le pone margin: 0 a todo, y el <dialog>
+		   centra con margin: auto: sin esto quedaba pegado arriba a la izquierda. */
+		margin: auto;
+		padding: 0;
+		border: none;
+		border-radius: var(--radius-lg);
+		background: var(--color-bg);
+		color: var(--color-text);
+		box-shadow: var(--shadow-lg);
+		overflow: auto;
+	}
+	.demo-motor::backdrop { background: rgb(32 30 29 / 0.55); }
+
+	.demo-motor .demo-cabeza {
+		display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4);
+		padding: var(--space-6) var(--space-6) var(--space-3);
+	}
+	.demo-motor h2 { margin: 0; font-size: clamp(22px, 2.6vw, 28px); }
+	.demo-motor .demo-sub { margin: var(--space-1) 0 0; font-size: 15px; color: var(--color-neutral-700); }
+	.demo-motor .demo-cerrar {
+		flex: none; display: grid; place-items: center;
+		width: 44px; height: 44px; border-radius: 50%;
+		border: 1px solid var(--color-divider); background: transparent; color: var(--color-text);
+		cursor: pointer;
+	}
+	.demo-motor .demo-cerrar:hover { background: var(--color-surface); }
+
+	.demo-motor .demo-cuerpo {
+		display: grid; gap: var(--space-6);
+		padding: 0 var(--space-6) var(--space-4);
+	}
+	@media (min-width: 820px) {
+		.demo-motor .demo-cuerpo { grid-template-columns: 1fr 1fr; align-items: start; }
+	}
+
+	.demo-motor .demo-ejemplos {
+		display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2);
+		font-size: 13px; color: var(--color-neutral-700); margin-bottom: var(--space-4);
+	}
+	.demo-motor .demo-chip {
+		font: inherit; font-size: 13px; font-weight: 600;
+		min-height: 36px; padding: 6px 14px; border-radius: 999px; cursor: pointer;
+		border: 1px solid var(--color-accent); background: transparent; color: var(--color-accent-700);
+	}
+	.demo-motor .demo-chip:hover { background: color-mix(in srgb, var(--color-accent) 12%, transparent); }
+
+	.demo-motor .demo-grilla { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+	.demo-motor .demo-campo { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+	.demo-motor .demo-campo small { color: var(--color-neutral-700); }
+	.demo-motor .demo-campo input {
+		min-height: 44px; padding: 8px 12px; font: inherit; font-size: 16px;
+		color: var(--color-text); background: var(--color-surface);
+		border: 1px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+		border-radius: var(--radius-md);
+	}
+	.demo-motor .demo-campo input:focus-visible { outline: 2px solid var(--color-accent-700); outline-offset: 1px; }
+
+	.demo-motor .demo-check {
+		display: flex; align-items: flex-start; gap: var(--space-2);
+		margin-top: var(--space-4); font-size: 14px; cursor: pointer;
+	}
+	.demo-motor .demo-check input { width: 20px; height: 20px; margin-top: 1px; accent-color: var(--color-accent-700); }
+	.demo-motor .demo-check small { display: block; font-size: 12px; color: var(--color-neutral-700); }
+	.demo-motor .demo-enviar { width: 100%; min-height: 46px; margin-top: var(--space-4); font-size: 16px; }
+
+	.demo-motor .demo-resultado { min-height: 120px; }
+	.demo-motor .demo-vacio {
+		margin: 0; padding: var(--space-6); text-align: center; font-size: 14px;
+		color: var(--color-neutral-700);
+		border: 1px dashed var(--color-divider); border-radius: var(--radius-md);
+	}
+	.demo-motor .demo-error {
+		margin: 0; padding: var(--space-4); font-size: 14px;
+		border: 2px solid var(--color-accent-700); border-radius: var(--radius-md);
+		background: var(--color-accent-100);
+	}
+
+	/* El panel de la estimación: violeta y punteado, como en la app. El borde
+	   discontinuo es la señal no cromática de que esto no es la escala. */
+	.demo-motor .demo-panel {
+		display: flex; flex-direction: column; gap: var(--space-3);
+		padding: var(--space-4); border-radius: var(--radius-md);
+		border: 1px dashed var(--ia); background: var(--ia-fondo); color: #1f1b2e;
+	}
+	.demo-motor .demo-panel-cab { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); }
+	.demo-motor .demo-chip-ia {
+		padding: 4px 12px; border-radius: 6px; font-size: 15px; font-weight: 700;
+		border: 1px dashed var(--ia); background: #fff; color: var(--ia);
+	}
+	.demo-motor .demo-no-news2 { font-size: 12px; color: #4d4566; }
+	.demo-motor .demo-razon { margin: 0; font-size: 15px; }
+	.demo-motor .demo-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+	.demo-motor .demo-contrib {
+		display: grid; grid-template-columns: minmax(0, 1fr) 48px 96px 48px;
+		align-items: center; gap: var(--space-2); font-size: 13px;
+	}
+	.demo-motor .demo-contrib-valor { text-align: right; font-variant-numeric: tabular-nums; }
+	.demo-motor .demo-contrib-pista { display: block; }
+	/* Lleno = acerca a la alerta; hueco = la aleja. Las dos direcciones no se
+	   distinguen solo por color. */
+	.demo-motor .demo-barra { display: block; height: 7px; border-radius: 4px; background: var(--ia); }
+	.demo-motor .demo-barra-reduce { background: transparent; border: 1px solid var(--ia); height: 7px; box-sizing: border-box; }
+	.demo-motor .demo-contrib-dir { font-size: 12px; color: #4d4566; text-align: right; }
+	.demo-motor .demo-nota { margin: 0; font-size: 13px; color: #4d4566; }
+	.demo-motor .demo-advertencia { margin: 0; font-size: 12px; font-style: italic; color: #4d4566; }
+
+	.demo-motor .demo-aviso {
+		margin: 0; padding: var(--space-3) var(--space-6) var(--space-6);
+		font-size: 13px; color: var(--color-neutral-700);
+	}
+
+	@media (max-width: 480px) {
+		.demo-motor .demo-cabeza { padding: var(--space-4) var(--space-4) var(--space-2); }
+		.demo-motor .demo-cuerpo { padding: 0 var(--space-4) var(--space-3); }
+		.demo-motor .demo-aviso { padding: var(--space-2) var(--space-4) var(--space-4); }
+		.demo-motor .demo-contrib { grid-template-columns: minmax(0, 1fr) 40px 64px 44px; }
+	}
+</style>
