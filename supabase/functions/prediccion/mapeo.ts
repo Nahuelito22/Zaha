@@ -94,6 +94,56 @@ export function aObservacion(
 }
 
 /**
+ * ¿El motor contestó JSON?
+ *
+ * EL ESTADO HTTP NO ALCANZA, Y ESO COSTÓ UN 500 CORRIENDO LA APLICACIÓN.
+ * Hugging Face sirve páginas HTML **con estado 2xx**: la pantalla de demostración en la
+ * raíz del Space y el aviso de que el Space está despertando. Una de esas llegó acá, pasó
+ * por `estadoSegunRespuesta` como "ok" —el estado era 2xx, no había nada que objetar— y
+ * `respuesta.json()` reventó con un `SyntaxError` que nadie atrapaba.
+ *
+ * Lo que convirtió el detalle en un problema serio: el 500 que devuelve el runtime cuando
+ * una excepción escapa **no lleva las cabeceras CORS de esta función**, así que el
+ * navegador lo descartó sin leerlo y la aplicación reportó «no se pudo enviar el pedido a
+ * la Edge Function». Es decir: el síntoma de una función que no existe, por un motor que
+ * contestó de más.
+ *
+ * Se mira el tipo declarado y no se intenta adivinar por el contenido: si el motor dice
+ * que manda HTML, no hay nada que parsear.
+ */
+export function pareceJson(contentType: string | null | undefined): boolean {
+  if (!contentType) return false;
+  // `application/json` y `application/problem+json`, con o sin `; charset=utf-8`.
+  // El `(;|$)` del final es lo que evita que `application/jsonp` pase por JSON.
+  return /^application\/([\w.-]+\+)?json\s*(;|$)/i.test(contentType.trim());
+}
+
+/**
+ * La URL exacta que se le pide al motor.
+ *
+ * Tolera las barras de sobra porque el valor sale de un secreto que se pega a mano en un
+ * panel: `…/api`, `…/api/` y `…/api//` tienen que dar todos lo mismo.
+ */
+export function urlDePrediccion(urlBase: string): string {
+  return `${urlBase.replace(/\/+$/, "")}/prediccion`;
+}
+
+/**
+ * Lo único de la URL que se puede registrar.
+ *
+ * Se registra el camino y NO la URL entera a propósito: lo que hay que poder ver en un
+ * log es si el `/api` está donde tiene que estar, y para eso el host no aporta nada. Si
+ * alguien pega cualquier cosa en el secreto, esa cualquier cosa no termina en los logs.
+ */
+export function caminoRegistrable(url: string): string {
+  try {
+    return new URL(url).pathname;
+  } catch {
+    return "(URL invalida)";
+  }
+}
+
+/**
  * Qué le contestamos a la aplicación cuando el motor no está.
  *
  * `dormido` y `caido` NO son errores para quien llama: la aplicación sigue mostrando
