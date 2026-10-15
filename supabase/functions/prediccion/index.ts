@@ -37,8 +37,11 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 import {
   aObservacion,
+  caminoRegistrable,
   estadoSegunRespuesta,
   explicarEstado,
+  pareceJson,
+  urlDePrediccion,
   type Estado,
   type TomaDeLaBase,
 } from "./mapeo.ts";
@@ -148,12 +151,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const toma = tomas[0] as TomaDeLaBase;
   const observacion = aObservacion(toma, paciente.date_of_birth);
 
+  const destino = urlDePrediccion(urlDelMotor);
+  // Para los logs: el camino solo, nunca el host ni —por supuesto— el token.
+  const camino = caminoRegistrable(destino);
+
   const control = new AbortController();
   const reloj = setTimeout(() => control.abort(), TIEMPO_LIMITE_MS);
 
   let respuesta: Response;
   try {
-    respuesta = await fetch(`${urlDelMotor.replace(/\/$/, "")}/prediccion`, {
+    respuesta = await fetch(destino, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -177,11 +184,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const estado = estadoSegunRespuesta(respuesta.status);
   if (estado !== "ok") {
-    console.error(`el motor respondio ${respuesta.status}`);
+    console.error(`el motor respondio ${respuesta.status} en ${camino}`);
     return degradado(estado);
   }
 
-  const prediccion = await respuesta.json();
+  // UN 2xx NO GARANTIZA JSON (ver `pareceJson` en mapeo.ts). Hugging Face contesta HTML
+  // con estado 200 cuando el Space esta despertando o cuando la URL no apunta a la API, y
+  // hasta que esta guarda estuvo aca ese HTML hacia reventar `json()`: la funcion
+  // devolvia 500, el 500 del runtime no lleva estas cabeceras CORS, y el navegador lo
+  // reportaba como "no se pudo enviar el pedido" --o sea, como si la funcion no existiera.
+  const tipo = respuesta.headers.get("content-type");
+  if (!pareceJson(tipo)) {
+    // El adelanto del cuerpo es lo unico que distingue las dos causas posibles, que desde
+    // el navegador son identicas: el Space dormido y el secreto sin `/api`.
+    const adelanto = (await respuesta.text()).slice(0, 160).replace(/\s+/g, " ");
+    console.error(
+      `el motor contesto ${respuesta.status} en ${camino} con content-type ` +
+        `"${tipo}" en vez de JSON. Adelanto del cuerpo: ${adelanto}`,
+    );
+    return degradado("caido");
+  }
+
+  let prediccion: unknown;
+  try {
+    prediccion = await respuesta.json();
+  } catch (e) {
+    // Declaro JSON y mando algo roto. Tampoco puede escapar: un throw aca es otro 500
+    // sin cabeceras CORS.
+    console.error(`el motor declaro JSON invalido en ${camino}:`, String(e));
+    return degradado("caido");
+  }
 
   return responder({
     estado: "ok",

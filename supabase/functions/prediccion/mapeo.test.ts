@@ -14,9 +14,12 @@ import assert from "node:assert/strict";
 import {
   aConfusion,
   aObservacion,
+  caminoRegistrable,
   edadEnLaToma,
   estadoSegunRespuesta,
   explicarEstado,
+  pareceJson,
+  urlDePrediccion,
   type TomaDeLaBase,
 } from "./mapeo.ts";
 
@@ -123,4 +126,65 @@ test("ningún mensaje de degradación sugiere que NEWS2 esté comprometido", () 
 
 test("el estado ok no deja mensaje", () => {
   assert.equal(explicarEstado("ok"), "");
+});
+// -- un 2xx no garantiza JSON -----------------------------------------------------------
+//
+// Este bloque existe por un 500 real. Hugging Face contesto HTML con estado 200,
+// `estadoSegunRespuesta` dijo "ok" --el estado era 2xx-- y `respuesta.json()` revento con
+// un SyntaxError que nadie atrapaba. El 500 del runtime no lleva las cabeceras CORS de la
+// funcion, asi que el navegador lo descarto sin leerlo y la app reporto "no se pudo enviar
+// el pedido a la Edge Function": el sintoma de una funcion inexistente.
+
+test("sólo lo que se declara JSON cuenta como JSON", () => {
+  assert.ok(pareceJson("application/json"));
+  assert.ok(pareceJson("application/json; charset=utf-8"));
+  assert.ok(pareceJson("APPLICATION/JSON"));
+  assert.ok(pareceJson("  application/json  "));
+  assert.ok(pareceJson("application/problem+json"));
+});
+
+test("el HTML que Hugging Face sirve con estado 200 no cuenta como JSON", () => {
+  // Esta es exactamente la respuesta que hacía reventar `json()`.
+  assert.ok(!pareceJson("text/html; charset=utf-8"));
+  assert.ok(!pareceJson("text/plain"));
+  // Sin cabecera tampoco se asume: adivinar es lo que trajo el problema.
+  assert.ok(!pareceJson(null));
+  assert.ok(!pareceJson(undefined));
+  assert.ok(!pareceJson(""));
+  // Y que el nombre empiece con "json" no alcanza.
+  assert.ok(!pareceJson("application/jsonp"));
+  assert.ok(!pareceJson("application/json-seq"));
+});
+
+test("el /api del secreto sobrevive a las barras de sobra", () => {
+  // El valor se pega a mano en el panel de Supabase; las tres formas son la misma.
+  const esperado = "https://zaha-cdss-inferencia.hf.space/api/prediccion";
+  assert.equal(urlDePrediccion("https://zaha-cdss-inferencia.hf.space/api"), esperado);
+  assert.equal(urlDePrediccion("https://zaha-cdss-inferencia.hf.space/api/"), esperado);
+  assert.equal(urlDePrediccion("https://zaha-cdss-inferencia.hf.space/api///"), esperado);
+});
+
+test("un secreto sin /api deja la marca a la vista en el camino", () => {
+  // El sintoma de esto tambien es HTML con 200, y el log tiene que permitir distinguirlo.
+  assert.equal(
+    caminoRegistrable(urlDePrediccion("https://zaha-cdss-inferencia.hf.space")),
+    "/prediccion",
+  );
+  assert.equal(
+    caminoRegistrable(urlDePrediccion("https://zaha-cdss-inferencia.hf.space/api")),
+    "/api/prediccion",
+  );
+});
+
+test("del destino se registra el camino y nunca el host", () => {
+  // Si esto registrara la URL entera, lo que alguien pegue por error en el secreto
+  // --incluido algo que no deberia estar en un log-- terminaria en los registros.
+  const camino = caminoRegistrable("https://zaha-cdss-inferencia.hf.space/api/prediccion");
+  assert.equal(camino, "/api/prediccion");
+  assert.ok(!camino.includes("hf.space"));
+});
+
+test("una URL inválida no rompe el registro", () => {
+  assert.equal(caminoRegistrable("no-es-una-url"), "(URL invalida)");
+  assert.equal(caminoRegistrable(""), "(URL invalida)");
 });
