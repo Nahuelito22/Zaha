@@ -180,10 +180,15 @@ def _tabla(archivo, titulo, subtitulo, columnas, filas, pie, ancho=15.6, alto_px
                 fig.text(x, y - h * 0.21, celda[2], fontsize=8.5, color=GRIS,
                          ha=ha, va="center")
             else:
-                gris = isinstance(celda, tuple) and celda[0] == "gris"
+                # 'mono' existe para los hashes de la bitacora de auditoria: con la
+                # tipografia de texto, dos cadenas hexadecimales distintas se parecen
+                # demasiado y la figura deja de probar lo que quiere probar.
+                marca = celda[0] if isinstance(celda, tuple) else None
                 txt = celda[1] if isinstance(celda, tuple) else celda
-                fig.text(x, y, txt, fontsize=10.5,
-                         color=GRIS if gris else TINTA, ha=ha, va="center")
+                extra = {"family": "DejaVu Sans Mono"} if marca == "mono" else {}
+                fig.text(x, y, txt, fontsize=9.0 if marca == "mono" else 10.5,
+                         color=GRIS if marca == "gris" else TINTA, ha=ha,
+                         va="center", **extra)
         fig.add_artist(plt.Line2D([0.035, 0.965], [y - h / 2, y - h / 2],
                                   color=GRIS_TENUE, lw=0.7, transform=fig.transFigure))
 
