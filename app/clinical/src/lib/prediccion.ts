@@ -96,6 +96,23 @@ const MENSAJES: Record<Exclude<ResultadoPrediccion['estado'], 'ok'>, string> = {
   sin_sesion: 'Sesión no iniciada. El puntaje NEWS2 no depende de esto.',
 }
 
+/**
+ * Deja rastro de por qué no hubo estimación, sin romper nada.
+ *
+ * La degradación es silenciosa PARA EL USUARIO, y eso está bien: el NEWS2 sigue en
+ * pantalla y una alarma por un servicio opcional sería ruido. Pero ser silenciosa para
+ * QUIEN DEPURA costó caro: un error de CORS en la Edge Function se veía exactamente
+ * igual que un Space dormido —«el motor no está disponible»— y el diagnóstico salió
+ * recién al mirar los registros del servidor.
+ *
+ * Un `console.warn` no se le muestra a nadie en producción y convierte media hora de
+ * búsqueda en una línea.
+ */
+function avisarEnConsola(estado: string, detalle?: unknown): void {
+  // eslint-disable-next-line no-console
+  console.warn(`[zaha] sin estimación (${estado})`, detalle ?? '')
+}
+
 function sinPrediccion(
   estado: Exclude<ResultadoPrediccion['estado'], 'ok'>,
   mensaje?: string,
@@ -195,8 +212,9 @@ export function crearServicioPrediccion(
           ? { sensibilidad_objetivo: opciones.sensibilidadObjetivo }
           : {}),
       })
-    } catch {
+    } catch (e) {
       // Red caída, DNS, CORS, lo que sea. Nunca sale de acá.
+      avisarEnConsola('excepcion al invocar', e)
       pausadoHasta = ahora() + pausaMs
       ultimoEstadoMalo = 'caido'
       return sinPrediccion('caido')
@@ -206,8 +224,12 @@ export function crearServicioPrediccion(
       // 401 de la Edge Function: no hay sesión. No se pausa, porque se arregla con un
       // login y la proxima llamada ya tendria que andar.
       const mensaje = String((respuesta.error as { message?: string })?.message ?? '')
-      if (/401|jwt|unauthor/i.test(mensaje)) return sinPrediccion('sin_sesion')
+      if (/401|jwt|unauthor/i.test(mensaje)) {
+        avisarEnConsola('sin sesion', mensaje)
+        return sinPrediccion('sin_sesion')
+      }
 
+      avisarEnConsola('la funcion devolvio error', mensaje)
       pausadoHasta = ahora() + pausaMs
       ultimoEstadoMalo = 'caido'
       return sinPrediccion('caido')
@@ -215,6 +237,7 @@ export function crearServicioPrediccion(
 
     const cuerpo = respuesta.data as RespuestaDeLaFuncion | null
     if (!cuerpo || typeof cuerpo.estado !== 'string') {
+      avisarEnConsola('respuesta sin estado reconocible', cuerpo)
       pausadoHasta = ahora() + pausaMs
       ultimoEstadoMalo = 'caido'
       return sinPrediccion('caido')

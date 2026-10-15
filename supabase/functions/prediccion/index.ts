@@ -48,10 +48,19 @@ import {
 // triage que se cuelga 40 s es peor que una sin estimacion.
 const TIEMPO_LIMITE_MS = 8_000;
 
+// LA LISTA DE CABECERAS PERMITIDAS TIENE QUE INCLUIR LAS QUE MANDA supabase-js.
+// Costo encontrarlo corriendo la app: decia solo "authorization, content-type", y
+// `functions.invoke` manda ademas `apikey` y `x-client-info`. El preflight respondia
+// 200, el navegador bloqueaba el POST por una cabecera no autorizada, y en los registros
+// de la funcion se veian OPTIONS y NINGUN POST. Del lado del cliente no habia error
+// visible: la degradacion elegante lo convertia en "el motor no esta disponible".
+//
+// O sea: el sintoma era identico al de un Space caido, y la causa estaba en esta linea.
 const CABECERAS = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, content-type, apikey, x-client-info, x-supabase-api-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
