@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSesion } from '../auth/sesion'
@@ -82,15 +82,42 @@ export function CargarVitales() {
     return Number.isNaN(n) || n < RANGOS[campo].min || n > RANGOS[campo].max
   }
 
+  // `<dialog>` nativo a propósito: trae el atrapado del foco, el cierre con
+  // Escape y el fondo oscurecido sin que haya que implementarlos a mano, que es
+  // justo donde las confirmaciones caseras quedan inaccesibles.
+  const dialogo = useRef<HTMLDialogElement>(null)
+
   const camposNumericos = Object.keys(RANGOS) as CampoNumerico[]
   const hayFueraDeRango = camposNumericos.some(fueraDeRango)
   const completo =
     camposNumericos.every((c) => valores[c] !== '') && acvpu !== null
   const puedeGuardar = completo && !hayFueraDeRango && !guardando
 
-  async function guardar(e: FormEvent) {
+  /**
+   * El envío del formulario ya NO guarda: abre la confirmación.
+   *
+   * POR QUÉ ACÁ SÍ HAY CONFIRMACIÓN Y EN LAS ALERTAS NO.
+   * Parece una contradicción con el «un clic es un clic» del acuse de alertas,
+   * y no lo es: son dos actos distintos. Acusar una alerta no pierde nada —el
+   * log es append-only y conserva cada acto con su firma, así que lo peor que
+   * puede pasar es un registro de más—. Cargar una toma, en cambio, ESCRIBE un
+   * dato clínico que después no se puede borrar: una corrección exige una
+   * enmienda, que queda visible para siempre, y mientras tanto un valor mal
+   * tipeado dispara una alerta real sobre un paciente que no la necesita.
+   *
+   * Confirmar un acto que no se puede deshacer no es fricción: es la única
+   * oportunidad de revisar.
+   */
+  function pedirConfirmacion(e: FormEvent) {
     e.preventDefault()
+    if (!puedeGuardar) return
+    setError(null)
+    dialogo.current?.showModal()
+  }
+
+  async function confirmarYGuardar() {
     if (!puedeGuardar || !episodio || !session || !acvpu) return
+    dialogo.current?.close()
     setGuardando(true)
     setError(null)
 
@@ -252,7 +279,7 @@ export function CargarVitales() {
 
   // --- Formulario -----------------------------------------------------------
   return (
-    <form onSubmit={guardar} className="flex flex-col gap-5">
+    <form onSubmit={pedirConfirmacion} className="flex flex-col gap-5">
       <div>
         <h2>{paciente}</h2>
         <p className="ctext-sm ctext-muted">
@@ -326,27 +353,33 @@ export function CargarVitales() {
         </fieldset>
       </div>
 
-      <fieldset className="flex flex-col gap-2">
-        <legend className="vital-label">Nivel de consciencia (ACVPU)</legend>
-        <div className="grid gap-2 sm:grid-cols-2">
+      {/* DESPLEGABLE, NO CINCO BOTONES.
+          Eran cinco destinos táctiles pegados en una grilla de dos columnas, y
+          en un teléfono sostenido con una mano eso es una fuente de toques
+          equivocados: se elige «Confusión nueva» cuando se quiso «Alerta», y
+          ese error cambia el puntaje en 3 puntos y dispara una alerta. El
+          desplegable obliga a un gesto deliberado, garantiza que haya una sola
+          opción elegida, y de paso devuelve el ancho que ocupaban cinco
+          botones. */}
+      <label className="flex flex-col gap-1.5">
+        <span className="vital-label">Nivel de consciencia (ACVPU)</span>
+        <select
+          className="cselect"
+          value={acvpu ?? ''}
+          onChange={(e) => setAcvpu((e.target.value || null) as ACVPU | null)}
+          required
+        >
+          {/* La opción vacía existe para que «todavía no elegí» sea un estado
+              representable. Sin ella el desplegable mostraría «Alerta» de
+              entrada y un campo sin tocar parecería contestado. */}
+          <option value="">Elegir nivel…</option>
           {OPCIONES_ACVPU.map((o) => (
-            <button
-              key={o.valor}
-              type="button"
-              aria-pressed={acvpu === o.valor}
-              className={`cbtn cbtn-start ${
-                acvpu === o.valor ? 'cbtn-primary' : 'cbtn-secondary'
-              }`}
-              onClick={() => setAcvpu(o.valor)}
-            >
-              {/* Ancho fijo para que las 5 siglas alineen y el significado
-                  de cada una arranque en la misma columna. */}
-              <span className="vital-value w-5 text-[17px]">{o.sigla}</span>
-              <span className="font-medium">{o.texto}</span>
-            </button>
+            <option key={o.valor} value={o.valor}>
+              {o.sigla} · {o.texto}
+            </option>
           ))}
-        </div>
-      </fieldset>
+        </select>
+      </label>
 
       {error && (
         <p role="alert" className="panel ctext-sm font-semibold">
@@ -373,6 +406,61 @@ export function CargarVitales() {
           así que se cargan los 7 o no se guarda.
         </p>
       )}
+
+      {/* LA CONFIRMACIÓN MUESTRA LO QUE SE VA A GUARDAR, NO PREGUNTA «¿ESTÁS
+          SEGURO?» A SECAS.
+          Un cartel genérico se aprende a despachar en dos días y deja de
+          proteger: es la misma fatiga que el proyecto combate en las alertas,
+          aplicada al diálogo. Repetir acá los siete valores convierte el paso
+          en una RELECTURA —que es donde se caza un 80 tipeado como 8— en lugar
+          de un botón más en el camino. */}
+      <dialog ref={dialogo} className="cdialog">
+        <h3 className="m-0">Confirmar la toma</h3>
+        <p className="ctext-sm ctext-muted">
+          Una vez guardada no se puede borrar: corregirla exige una enmienda, y
+          ambas quedan visibles en el historial.
+        </p>
+
+        <ul className="cdialog-resumen">
+          {camposNumericos.map((campo) => (
+            <li key={campo}>
+              <span className="ctext-sm">{RANGOS[campo].etiqueta}</span>
+              <span className="col-num font-semibold">
+                {valores[campo]} {RANGOS[campo].unidad}
+              </span>
+            </li>
+          ))}
+          <li>
+            <span className="ctext-sm">Oxígeno suplementario</span>
+            <span className="font-semibold">{oxigeno ? 'Sí' : 'Aire ambiente'}</span>
+          </li>
+          <li>
+            <span className="ctext-sm">Consciencia (ACVPU)</span>
+            <span className="font-semibold">
+              {OPCIONES_ACVPU.find((o) => o.valor === acvpu)?.texto ?? '—'}
+            </span>
+          </li>
+        </ul>
+
+        <div className="flex flex-wrap gap-3">
+          {/* `type="button"` en las dos: están dentro del formulario y, sin
+              eso, cualquiera de ellas lo volvería a enviar. */}
+          <button
+            type="button"
+            className="cbtn cbtn-primary"
+            onClick={() => void confirmarYGuardar()}
+          >
+            Confirmar y guardar
+          </button>
+          <button
+            type="button"
+            className="cbtn cbtn-secondary"
+            onClick={() => dialogo.current?.close()}
+          >
+            Volver a revisar
+          </button>
+        </div>
+      </dialog>
     </form>
   )
 }
