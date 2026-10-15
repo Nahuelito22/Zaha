@@ -244,6 +244,127 @@
   border: 1px solid var(--c-predict);
 }
 
+/* ── Desplegable ────────────────────────────────────────────────────────
+   Reemplaza a los cinco botones del nivel de consciencia. Cinco destinos
+   táctiles pegados son una fuente de toques equivocados, y ahí un error
+   cambia el puntaje en 3 puntos. Mismos 44 px de alto que todo lo que se
+   toca durante la ronda.
+   ───────────────────────────────────────────────────────────────────── */
+.zaha-clinical .cselect {
+  min-height: 44px;
+  padding: 0 var(--cs-8) 0 var(--cs-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--cr-sm);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: 16px; /* menos de 16 px hace que iOS acerque la pantalla al abrir */
+  font-family: inherit;
+  /* La flecha se dibuja acá: la nativa cambia de forma en cada sistema y
+     rompe la consistencia del resto de los controles. */
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 18px center, right 12px center;
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+.zaha-clinical .cselect:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 2px;
+}
+
+/* ── Confirmación de un acto que no se puede deshacer ───────────────────
+   Se usa al guardar una toma. NO se usa al acusar una alerta: ese acto no
+   pierde nada —el log es append-only— y confirmarlo sería fricción pura.
+   Acá se escribe un dato clínico que después sólo se corrige con una
+   enmienda visible para siempre.
+   ───────────────────────────────────────────────────────────────────── */
+dialog.cdialog {
+  width: min(28rem, calc(100vw - 2rem));
+  padding: var(--cs-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--cr-md);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+/* EL `display` VA SOLO EN EL ESTADO ABIERTO, Y NO ES UN DETALLE DE ESTILO.
+   El navegador oculta un <dialog> cerrado con `dialog:not([open]) {
+   display: none }` desde su hoja de estilos de usuario-agente. Cualquier
+   regla de `display` sobre `dialog.cdialog` a secas le gana por
+   especificidad y la pisa: el diálogo queda dibujado dentro del formulario,
+   siempre, con los campos vacíos y los botones de confirmar activos.
+   Costó un bug visible en la pantalla de carga. */
+dialog.cdialog[open] {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cs-3);
+  /* UN MODAL NATIVO SE CENTRA SOLO… SALVO ACÁ.
+     El navegador lo centra combinando `inset: 0` con `margin: auto` desde su
+     hoja de estilos. El preflight de Tailwind pone `margin: 0` en TODOS los
+     elementos y le borra ese centrado, así que el diálogo se pega arriba a la
+     izquierda. No depende del ancho de la pantalla: pasa igual en teléfono y
+     en tablet. Reponerlo es esto. */
+  margin: auto;
+}
+dialog.cdialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+/* El resumen de lo que se va a guardar: etiqueta a la izquierda, valor a la
+   derecha, para que se relea en vertical como una planilla. */
+.zaha-clinical .cdialog-resumen {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.zaha-clinical .cdialog-resumen > li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--cs-3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.zaha-clinical .cdialog-resumen > li:last-child {
+  border-bottom: 0;
+}
+
+/* El punto de operación y la advertencia de validez: información que NO se
+   puede borrar —es lo que impide sobrevender el modelo— pero que leída entera
+   en cada paciente, durante una ronda, deja de leerse. Va plegada.
+   El resorte tiene 44 px de alto como cualquier cosa que se toque acá. */
+.zaha-clinical .predict-detalles > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  color: var(--c-predict);
+  font-weight: 600;
+  list-style: none;
+}
+.zaha-clinical .predict-detalles > summary::-webkit-details-marker {
+  display: none;
+}
+/* El triángulo se dibuja acá para poder girarlo al abrir: sin una señal de
+   estado, un resorte cerrado se lee como un texto más. */
+.zaha-clinical .predict-detalles > summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  margin-right: var(--cs-2);
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 120ms ease;
+}
+.zaha-clinical .predict-detalles[open] > summary::before {
+  transform: rotate(90deg);
+}
+.zaha-clinical .predict-detalles > summary:focus-visible {
+  outline: 2px solid var(--c-predict);
+  outline-offset: 2px;
+}
+
 /* ── Valores de vitales ──────────────────────────────────────────────── */
 .zaha-clinical .vital-value {
   font-family: var(--font-numeric);
