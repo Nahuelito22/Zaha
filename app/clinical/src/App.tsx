@@ -36,6 +36,32 @@ function Encabezado() {
 }
 
 /**
+ * El aviso de que esto no es un dispositivo médico (gestión de riesgos, R16).
+ *
+ * Estaba en la landing y en la demo, pero no en la aplicación: quien entraba
+ * directo a /app no lo veía, y es justo la pantalla donde alguien podría cargar
+ * a un paciente real. Va en todas las pantallas, debajo del encabezado.
+ *
+ * En gris neutro y NO en los colores de riesgo: un aviso legal que pareciera
+ * una alerta competiría con las alertas de verdad, que es exactamente lo que el
+ * proyecto trata de evitar. Texto atenuado sobre superficie: 4,5:1 medido en
+ * design_system/auditoria_contraste.py.
+ */
+function AvisoPrototipo() {
+  return (
+    <p
+      className="ctext-xs ctext-muted m-0 border-b px-5 py-1.5 text-center"
+      style={{ borderColor: 'var(--c-border)', background: 'var(--c-surface)' }}
+    >
+      {/* Corto a propósito: con la versión larga ocupaba cuatro renglones
+          (72px) arriba de la sala en un teléfono. Así entra en dos. */}
+      Prototipo académico. <strong>No es un dispositivo médico</strong>: no lo
+      uses con pacientes reales.
+    </p>
+  )
+}
+
+/**
  * Puerta de entrada. No alcanza con estar autenticado: hace falta un perfil
  * activo, que es lo que evalúan las políticas RLS. Un usuario de auth sin
  * perfil vería la aplicación vacía y sin explicación, así que se lo dice.
@@ -65,6 +91,7 @@ function Privado({ children }: { children: React.ReactNode }) {
   return (
     <div className="zaha-clinical flex min-h-full flex-col">
       <Encabezado />
+      <AvisoPrototipo />
       {/* El tope de 3xl (768px) es el ancho de lectura cómodo de un formulario
           y se mantiene como norma. `ancho:` lo levanta solo en tablet acostada,
           donde la sala se muestra como tabla y necesita las seis columnas: si

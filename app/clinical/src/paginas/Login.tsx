@@ -92,6 +92,13 @@ export function Login() {
             </p>
           )}
         </form>
+
+        {/* Gestión de riesgos, R16: es la primera pantalla de quien entra
+            directo a /app, así que el aviso tiene que estar acá también. */}
+        <p className="text-muted m-0 text-center text-sm">
+          Prototipo académico. No es un dispositivo médico: no lo uses con
+          pacientes reales.
+        </p>
       </div>
     </div>
   )
