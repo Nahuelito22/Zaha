@@ -225,16 +225,38 @@ Si el servidor **rechaza** una toma, aparece en el mismo recuadro con el motivo 
 ## 9. Si cargaste un dato mal
 
 Una toma guardada **no se borra ni se edita**. Esto lo exige la ley: la historia clínica tiene
-que conservar cada registro y cada corrección.
+que conservar cada registro y cada corrección. Lo que se hace es una **corrección** (en el
+sistema se llama *enmienda*).
 
-La forma prevista de corregir es una **enmienda**: una toma nueva que reemplaza a la errónea y
-dice por qué. Las dos quedan en el historial, la vieja marcada como **corregida** y la nueva
-con su motivo.
+1. Abrí el detalle del paciente y bajá hasta el **Historial**.
+2. En la toma equivocada, tocá **Corregir**. El formulario se abre con los valores que se
+   cargaron, así que sólo tenés que cambiar el que está mal.
+3. Escribí el **motivo**, por ejemplo "se tipeó 8 en lugar de 18 en la frecuencia
+   respiratoria". Tiene que tener al menos 10 caracteres y queda visible para siempre.
+4. Tocá **Guardar corrección**. El resumen muestra cada cambio como **antes → después**.
+   Revisalo y confirmá.
 
-> **Limitación del prototipo.** La base de datos ya admite enmiendas, pero **la aplicación
-> todavía no tiene una pantalla para cargarlas**. Si cargaste un dato mal, avisale a
-> jefatura. Mientras tanto, no cargues una toma "corregida" como si fuera nueva: quedarían
-> dos tomas válidas en lugar de una errónea y una corrección.
+Después de corregir:
+
+- La toma original **sigue en el historial**, marcada como **corregida**, y la corrección
+  aparece con su motivo.
+- **La hora de la toma no cambia**: la corrección es de esa misma observación.
+- El puntaje y el nivel se recalculan con los valores corregidos.
+- Si la toma equivocada tenía una alerta pendiente, **se cierra** con tu nombre y el motivo.
+  Si el valor corregido también la justifica, se genera una alerta nueva.
+
+Algunas cosas no se pueden hacer:
+
+- **Corregir sin conexión.** A diferencia de la carga, la corrección no se guarda en el
+  dispositivo. Si no hay red, la app avisa que no se guardó. Probá de nuevo cuando vuelva.
+- **Guardar una corrección que no cambia nada.**
+- **Corregir una toma que ya fue corregida.** Si la corrección también está mal, corregí la
+  versión vigente: es la que no dice "corregida".
+
+No cargues una toma nueva para "pisar" la equivocada: quedarían dos tomas válidas en lugar de
+una errónea y su corrección.
+
+*Figura 45: corrección de una toma, con el resumen antes → después.*
 
 ---
 
