@@ -13,7 +13,7 @@ se movieron a `scripts/`.
 | Archivo | Qué es |
 |---|---|
 | `00_CARTA_MAGNA.md` | El encuadre del proyecto: qué es Zaha y qué no es |
-| `02_DECISIONES_TECNICAS.md` | **Los 9 ADR.** Lo más importante de la carpeta |
+| `02_DECISIONES_TECNICAS.md` | **Los 10 ADR.** Lo más importante de la carpeta |
 | `03_BACKLOG_JIRA.md` | El backlog en prosa, del que salen los CSV |
 | `04_SPRINTS.md` | Planificación por sprint. ⚠️ Usa la numeración vieja de 8 sprints; Jira usa la compactada a 6 |
 | `05_PREPARACION.md` | Método de trabajo: notebooks, entorno, local vs nube |
@@ -26,17 +26,15 @@ se movieron a `scripts/`.
 | | Decisión |
 |---|---|
 | **ADR-001** | React SPA (PWA) + Astro para la landing; NEWS2 lo calcula la base |
-| **ADR-002** | MIMIC-IV-ED como fuente principal — ⚠️ **desactualizado**, ver ADR-009 |
+| **ADR-002** | Datasets: de MIMIC-IV-ED como fuente principal a TRIAGE — la historia de la decisión |
 | **ADR-003** | Progresión baseline → GBM → LSTM → ensemble |
 | **ADR-004** | Inferencia PyTorch → ONNX en Hugging Face, con degradación elegante |
 | **ADR-005** | **Reencuadre: reducir tasa de alertas, no maximizar AUROC** |
 | **ADR-006** | Caveat: NEWS2 fue diseñado para sala general, no para guardia |
 | **ADR-007** | ACVPU y oxígeno suplementario no existen en MIMIC-IV-ED: se imputan |
+| **ADR-008** | Bitácora de auditoría en dos capas: append-only más cadena de hashes |
 | **ADR-009** | Segunda cohorte (TRIAGE) junto a MIMIC-IV-ED |
-
-> **ADR-008 no existe todavía.** Le corresponde el diseño en dos capas del log de auditoría
-> —prevención por privilegios más detección por cadena de hashes— implementado en
-> `SCRUM-72`. Está pendiente de escribir.
+| **ADR-010** | Qué modelo es el principal depende del tamaño de muestra |
 
 ## Lo que NO vive acá
 

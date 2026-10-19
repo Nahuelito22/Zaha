@@ -37,25 +37,52 @@ Una sola web responsive cubre móvil y PC sin Play Store, firmas ni builds nativ
 
 ---
 
-## ADR-002 — Datasets: MIMIC-IV-ED como fuente principal
-> ⚠️ **Ver ADR-006** para el caveat sobre el rendimiento de NEWS2 en urgencias.
-**Fecha:** 2026-08-25 · **Estado:** 🟡 Aceptada, bloqueada por credencial PhysioNet
+## ADR-002 — Datasets: de qué datos aprende el motor
+**Fecha:** 2026-08-25 · **Revisada:** 2026-10-19 · **Estado:** 🔄 Superada en lo principal
+por el ADR-009. Se conserva como historia de la decisión: qué se planeó, qué se encontró y
+dónde quedó.
 
-### Decisión
+### Lo que se decidió el 25/08
 - **Principal:** `MIMIC-IV-ED` (módulo de guardia), tabla `vitalsign`.
-- **Andamio:** dataset de Kaggle para construir la tubería mientras se destraba el acceso.
-- **Descartado:** MIMIC-IV completo (`chartevents`).
+- **Andamio:** un dataset de Kaggle, para construir la tubería mientras llegaba el acceso.
+- **Descartado:** MIMIC-IV completo (`chartevents`), porque es terapia intensiva: ahí casi
+  todos puntúan alto en NEWS2 y la escala pierde poder discriminativo.
 
-### Razón
-NEWS2 está diseñado y validado para pacientes de **sala/guardia, no de UCI**.
-En terapia intensiva casi todos puntúan alto y la escala pierde poder discriminativo.
-MIMIC-IV-ED tiene la población correcta, mediciones repetidas de casi exactamente
-los parámetros NEWS2, y desenlaces limpios (internación, pase a UCI, mortalidad).
-Además pesa una fracción de MIMIC-IV completo: manejable sin cluster.
+La razón era que MIMIC-IV-ED tenía la población correcta (guardia), "mediciones repetidas de
+casi exactamente los parámetros NEWS2" y desenlaces limpios. Esa frase resultó falsa.
 
-### Consecuencias
-- El Kaggle es **andamio, no producto**: sintético/simplificado, no defendible como evidencia.
-- Bloqueante activo: credencial de PhysioNet no aprobada. Ver `Plan/epica_04_motor_ia/`.
+### Lo que se encontró
+1. **El Kaggle no servía ni de andamio** (09/09): 200.020 filas de 200.020 pacientes, una
+   toma cada uno, sin ACVPU ni oxígeno suplementario y con un desenlace sintético. Se
+   reemplazó por el **demo abierto de MIMIC-IV-ED** (ODbL, sin credencial), que tiene el
+   mismo esquema que la base completa.
+2. **MIMIC-IV-ED tiene 5 de los 7 parámetros de NEWS2** (09/09, ADR-007): no registra
+   consciencia ni oxígeno suplementario, ni en el demo ni en la base completa. Se imputan
+   con el valor de menor riesgo, y el sesgo queda siempre en contra de la hipótesis.
+3. **Sobre el demo, la tesis no es medible** (15/09): con una estadía mediana de 5,8 h, la
+   etiqueta de 24 h no discrimina y colapsa a "el episodio terminó en internación". Se
+   puede medir la tasa de alertas de NEWS2, pero no su sensibilidad.
+4. **PhysioNet rechazó la credencial** (04/10). Antes, una solicitud quedó trabada porque el
+   correo al referente se mandó a un dominio mal tipeado.
+
+### Dónde quedó
+| Uso | Fuente |
+|---|---|
+| El modelo en producción y la comparativa contra NEWS2 | **TRIAGE** (Zenodo, CC0), ADR-009 |
+| La tubería de datos, la tasa de alertas de referencia y las pruebas | **Demo de MIMIC-IV-ED** |
+| La base completa de MIMIC-IV-ED | Sin acceso. La tubería corre sobre ella con `--origen` el día que llegue |
+
+**Lo que sigue valiendo de la decisión original:** que el dato tiene que ser de guardia o
+sala, no de terapia intensiva. TRIAGE cumple: son pacientes de guardia de tres centros.
+
+**Lo que se perdió:** las series temporales. TRIAGE tiene una sola toma por paciente, así
+que la hipótesis de la LSTM no se puede probar
+(`Plan/epica_04_motor_ia/04_caveat_lstm.md`).
+
+### Lección
+La frase que sostuvo la decisión —"casi exactamente los parámetros NEWS2"— se escribió sin
+abrir los archivos. Las tres decisiones siguientes (ADR-006, 007 y 009) salieron de
+verificar sobre los datos lo que esta daba por supuesto.
 
 ---
 
@@ -249,6 +276,76 @@ Las alternativas se evaluaron y se descartaron:
 - En la app real **no se imputa nada**: los 7 parámetros son obligatorios y sin ellos no se
   guarda. La imputación vive solo en la tubería de datos históricos, y esa asimetría es
   deliberada — al pie de la cama el dato se pide, en un dataset de 2011-2019 no se puede.
+
+---
+
+## ADR-008 — Bitácora de auditoría en dos capas: prevención y detección
+**Fecha:** 2026-09-10 (implementada en `SCRUM-72`) · **Escrita:** 2026-10-19 ·
+**Estado:** ✅ Aceptada
+
+### Contexto
+`vital_records` es append-only desde la Épica 2, pero `alerts` **sí se actualiza**: guarda
+el estado final de cada alerta, no su historia. Eso dejaba tres agujeros:
+
+1. Una alerta reconocida queda con quién y cuándo, pero no con que antes estuvo pendiente
+   ni con cuánto tardó en atenderse, que es lo primero que mira una auditoría clínica.
+2. La protección de `alerts` arrancaba con `IF auth.uid() IS NULL THEN RETURN NEW`: con la
+   clave de servicio se podía reescribir cualquier alerta, y la fila resultante era
+   indistinguible de una legítima.
+3. Nada permitía detectar que una fila se hubiera alterado por fuera de la aplicación.
+
+La Ley 25.326 (art. 9) exige medidas contra la adulteración de datos de salud, y "es
+inalterable porque la app no tiene un botón para alterarlo" no es una medida.
+
+### Decisión
+Una tabla aparte, `alert_audit_log`, que registra cada evento de cada alerta —emitida,
+reconocida, descartada, pospuesta— con **dos capas**, porque en una base de datos la
+prevención absoluta no existe: quien tiene privilegios de dueño puede desactivar un trigger.
+
+**Prevención: append-only de verdad.**
+- Sin permiso de `UPDATE` ni `DELETE` para ningún rol, ni por `GRANT` ni por política RLS.
+- Un trigger rechaza `UPDATE` y `DELETE` **sin** la excepción de `auth.uid()`: tampoco la
+  clave de servicio puede.
+- La escribe **la base, no la aplicación**: un trigger sobre `alerts` registra el evento. Si
+  dependiera de que el cliente se acuerde, el log valdría lo que la buena fe del cliente.
+- La función que escribe el log no está expuesta en la API para nadie.
+
+**Detección: cadena de hashes.**
+- Cada fila guarda `hash = sha256(hash_previo | contenido canónico)`. Borrar una fila,
+  insertar una en el medio o modificar una rompe la cadena de ahí en adelante.
+- `verificar_cadena_auditoria()` recalcula cada eslabón y devuelve el primero que no cierra.
+  No impide la manipulación: **la vuelve evidente**, que es lo que necesita un registro con
+  valor probatorio.
+- Un lock de transacción serializa las inserciones: sin él, dos eventos simultáneos se
+  encadenarían al mismo eslabón y la verificación fallaría sobre datos legítimos.
+
+**Lo que guarda cada evento:** quién (o `actor_es_sistema`, que no es lo mismo que "no se
+sabe quién"), el estado anterior y el nuevo, la nota, una **copia congelada** de la alerta
+en ese momento, y si la fila es *backfill*. Las alertas anteriores al log se cargaron
+marcadas como tales: afirmar que se observó lo que no se observó invalida un registro de
+auditoría.
+
+### Estado verificado
+El 19/10/2026, en producción: `verificar_cadena_auditoria()` devuelve **cadena íntegra, 22
+eventos** (17 emitidas, 3 pospuestas, 1 reconocida, 1 descartada; 13 de backfill).
+
+### Límites, dichos
+- **La cadena se puede rehacer entera.** Quien tenga privilegios de dueño puede desactivar
+  el trigger, alterar filas y **recalcular todos los hashes desde el principio**: la
+  verificación no lo notaría, porque no hay contra qué comparar. La mitigación conocida es
+  anclar el último hash afuera —publicarlo periódicamente en un lugar que la base no
+  controla— y **no está implementada**. Va a la gestión de riesgos (`SCRUM-75`).
+- **No cubre `vital_records`**, que es append-only por su propio diseño pero no está
+  encadenada.
+- La verificación la puede correr cualquier usuario con sesión, a propósito: es lo que la
+  hace auditable. Devuelve un resumen, nunca filas (ver
+  `Plan/epica_06_regulatorio/02_seguridad_supabase.md`).
+
+### Trampa pagada
+Al crear una función, Postgres le da `EXECUTE` a `PUBLIC`. `GRANT EXECUTE ... TO
+authenticated` no restringe nada: solo repite lo que ya estaba, y la función quedaba
+expuesta en la API **incluso para un anónimo**. Lo marcó el linter de Supabase y se corrigió
+con `REVOKE ... FROM PUBLIC, anon` en la migración `20260910193000`.
 
 ---
 
