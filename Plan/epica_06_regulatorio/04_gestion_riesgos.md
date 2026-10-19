@@ -73,7 +73,7 @@ seguimiento**, **8 o más no aceptable** sin reducirlo.
 | R13 | Acceso no autorizado a datos de pacientes | S3·P3 = 9 | RLS por rol, registro cerrado, funciones sin acceso anónimo | S3·P1 = 3 | Controlado |
 | R14 | Una cuenta con contraseña filtrada | S3·P2 = 6 | Cuentas creadas por el administrador | S3·P2 = 6 | Aceptado: la protección exige plan pago |
 | R15 | La explicación del modelo señala el parámetro equivocado | S2·P2 = 4 | Sólo se muestra si reconstruye exactamente la probabilidad | S2·P1 = 2 | Controlado |
-| R16 | Se usa el prototipo sobre un paciente real | S4·P2 = 8 | Aviso en la landing y en la demo; datos ficticios; registro cerrado | S4·P2 = **8** | ⚠️ Falta el aviso dentro de la app |
+| R16 | Se usa el prototipo sobre un paciente real | S4·P2 = 8 | Aviso en la landing, la demo, el login y todas las pantallas de la app; datos ficticios; registro cerrado | S4·P1 = 4 | Controlado con seguimiento |
 
 ## 4. Detalle de cada riesgo
 
@@ -204,25 +204,30 @@ accionable al pie de la cama.
 
 ### R16 — Uso del prototipo sobre un paciente real
 **Situación.** El sistema está publicado. Alguien podría cargar a un paciente real.
-**Controles.** El aviso "no es un dispositivo médico" en la landing y en la demo, los
-pacientes ficticios y el registro cerrado.
-**Falta.** La aplicación clínica (`/app`) **no muestra ese aviso** en ninguna pantalla.
-Quien entra directo a `/app` no lo ve. Es un control simple y pendiente: un aviso fijo y
-discreto en la aplicación.
+**Controles.** El aviso "no es un dispositivo médico" en la landing, en la demo, debajo del
+login y en **una franja fija debajo del encabezado de todas las pantallas de la
+aplicación** (`App.tsx`, `Login.tsx`). Más los pacientes ficticios y el registro cerrado.
+**Cómo se cerró.** Al escribir este documento se encontró que la aplicación no mostraba el
+aviso en ninguna pantalla: quien entraba directo a `/app` no lo veía. Se agregó el 19/10.
+Va en gris neutro y no en los colores de riesgo, para no competir con las alertas, y es
+corto para ocupar sólo dos renglones en un teléfono.
+**Residual.** Un aviso no impide el uso: lo vuelve una decisión consciente. Por eso el
+residual baja de probabilidad pero no desaparece.
 
 ## 5. Riesgo residual global
 
 El software controla lo que es suyo. Los errores de cálculo, de carga, de conectividad, de
-acceso y de auditoría tienen controles verificados, y el error que ocurrió (R03) se detectó
-por una medición del propio proyecto y se corrigió el mismo día.
+acceso y de auditoría tienen controles verificados. El error que ocurrió (R03) se detectó
+por una medición del propio proyecto y se corrigió el mismo día, y el control que faltaba
+para el uso indebido (R16, el aviso dentro de la aplicación) se agregó al escribir este
+documento.
 
 Lo que queda alto no es del software sino del problema: **NEWS2 en guardia pierde la mitad
 de los eventos (R01)**, **el modelo no está validado en la población local (R09)** y **la
 reducción de alertas no está demostrada (R04)**. Por eso el riesgo residual global es
 aceptable **para un prototipo académico con datos ficticios, y no para el uso clínico**.
-Pasar al uso clínico exigiría, como mínimo, cerrar R09 con datos locales, R16 con el aviso
-en la aplicación y R12 con el ancla externa, y la autorización regulatoria del
-`01_samd_anmat.md`.
+Pasar al uso clínico exigiría, como mínimo, cerrar R09 con datos locales y R12 con el ancla
+externa, y la autorización regulatoria del `01_samd_anmat.md`.
 
 ## 6. Cuándo revisar este documento
 
