@@ -30,13 +30,20 @@ SOLO = set(sys.argv[1:])  # p.ej. `python burndown.py burndown_sprint3.png`
 
 
 def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=None,
-            ancho=9.5):
+            ancho=9.5, alcance=None, cambio=None):
+    """dias: lista de date (habiles). real: puntos restantes, puede ser mas corta que dias.
+
+    `alcance` (opcional): el alcance comprometido de cada dia, para un sprint al que le
+    entro trabajo en el medio. Se dibuja como escalon con `cambio` = (indice, texto) en el
+    salto. Existe por el Sprint 5: sin esto, un sprint que paso de 54 a 64 puntos se
+    dibujaria como si siempre hubiera tenido 64, y el ideal mentiria desde el primer dia.
+    """
     if SOLO and archivo not in SOLO:
         return
-    """dias: lista de date (habiles). real: puntos restantes, puede ser mas corta que dias."""
     n = len(dias)
     x = list(range(n))
     ideal = [total * (1 - i / (n - 1)) for i in range(n)]
+    tope = max([total] + (alcance or []))
 
     # `ancho` existe por el Sprint 5: con 15 dias habiles las etiquetas del eje X se
     # pisan al ancho por defecto. Ojo tambien con el largo de `nota`: tight_layout le
@@ -47,6 +54,14 @@ def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=
 
     ax.plot(x, ideal, linestyle=(0, (5, 4)), linewidth=2, color=GRIS,
             label="Avance ideal", zorder=2)
+    if alcance:
+        ax.step(x, alcance, where="post", linewidth=1.4, color=TINTA, alpha=0.55,
+                label="Alcance comprometido", zorder=2)
+        if cambio:
+            i, texto = cambio
+            ax.annotate(texto, xy=(i, alcance[i]), xytext=(10, 8),
+                        textcoords="offset points", fontsize=9, color=TINTA, alpha=0.8)
+
     ax.plot(x[:len(real)], real, linewidth=2.4, color=TERRACOTA, marker="o",
             markersize=5.5, markerfacecolor="white", markeredgewidth=2,
             markeredgecolor=TERRACOTA, label="Trabajo restante", zorder=3)
@@ -70,11 +85,11 @@ def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=
                 xytext=(dx, dy), textcoords="offset points", ha=ha,
                 color=TERRACOTA, fontsize=10, fontweight="bold")
 
-    ax.set_ylim(0, total * 1.08)
+    ax.set_ylim(0, tope * 1.08)
     ax.set_xlim(-0.4, n - 0.6)
     ax.set_xticks(x)
     ax.set_xticklabels([d.strftime("%d/%m") for d in dias], fontsize=9, color=GRIS)
-    ax.yaxis.set_major_locator(MultipleLocator(max(5, round(total / 8 / 5) * 5)))
+    ax.yaxis.set_major_locator(MultipleLocator(max(5, round(tope / 8 / 5) * 5)))
     ax.tick_params(axis="y", labelsize=9, colors=GRIS, length=0)
     ax.tick_params(axis="x", length=0)
     ax.grid(axis="y", color=GRIS_TENUE, linewidth=0.8, alpha=0.7, zorder=0)
@@ -87,7 +102,9 @@ def dibujar(nombre, archivo, dias, real, total, subtitulo, en_curso=False, nota=
     ax.set_title(nombre, fontsize=14, fontweight="bold", loc="left", pad=34)
     ax.text(0, 1.025, subtitulo, transform=ax.transAxes, fontsize=10, color=GRIS)
 
-    ax.legend(frameon=False, fontsize=10, loc="upper right",
+    # Con la linea de alcance arriba de todo, la leyenda arriba a la derecha la pisaba:
+    # en ese caso baja a media altura, donde a la derecha solo pasa el ideal, ya bajo.
+    ax.legend(frameon=False, fontsize=10, loc="center right" if alcance else "upper right",
               labelcolor=TINTA, handlelength=2.4)
 
     if nota:
@@ -148,9 +165,14 @@ dibujar("Sprint 4 — Modelado", "burndown_sprint4.png", d4, r4, 75,
              "SCRUM-49 y 51, bloqueadas por la credencial de PhysioNet, y las historias "
              "SCRUM-47 y 70, que se cierran al terminar sus tareas hijas.")
 
-# --- Sprint 5: 13/10 - 02/11, 54 pts en 9 items ----------------------------
-# UNICO SPRINT QUE CIERRA EN CERO, y lo hace al tercer dia de una ventana de tres
-# semanas. No es un error del grafico: el alcance comprometido se completo el 15/10.
+# --- Sprint 5: 13/10 - 02/11, 64 pts en 11 items (54 en 9 al arrancar) -----
+# UNICO SPRINT QUE CIERRA EN CERO. El alcance original se completo al tercer dia de una
+# ventana de tres semanas: no es un error del grafico.
+#
+# EL 15/10 ENTRARON DOS ITEMS: SCRUM-84 (actualizar la landing, 5) y SCRUM-85
+# (desplegar en produccion, 5). El alcance paso de 54 a 64 y se dibuja como escalon.
+# Se cerraron SCRUM-85 el 15/10 y SCRUM-84 el 19/10 (fechas de resolucion de Jira).
+# Convencion de toda esta serie: el valor de un dia es lo que restaba AL EMPEZARLO.
 #
 # La ventana arranca el 13/10 y no el 20/10 como estaba planificada, porque ese es el
 # dia en que empezo el trabajo real segun el historial de git. Se corrigio en Jira.
@@ -161,11 +183,16 @@ dibujar("Sprint 4 — Modelado", "burndown_sprint4.png", d4, r4, 75,
 #   14/10  SCRUM-63 (8) el Space arrancando de verdad, 67 (5) mostrar la
 #          prediccion, 68 (8) flujo one-click, 73 (5) encuadre SaMD    -> 26 pts
 #   15/10  SCRUM-61 (5) HU-04, que cierra con la verificacion en vivo  ->  5 pts
+#          + entran SCRUM-84 y 85 (+10) y cierra SCRUM-85 (5)
+#   19/10  SCRUM-84 (5): la landing con la demostracion del motor
 d5 = [date(2026, 10, d) for d in (13, 14, 15, 16, 19, 20, 21, 22, 23, 26, 27, 28, 29, 30)] + \
      [date(2026, 11, 2)]
-r5 = [54, 31, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+r5 = [54, 31, 5, 5, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+a5 = [54, 54] + [64] * 13
 dibujar("Sprint 5 — Integración IA", "burndown_sprint5.png", d5, r5, 54,
-        "13/10 – 02/11/2026 · 9 items · 54 puntos · completo",
-        ancho=12.0,
-        nota="El alcance comprometido se completó al tercer día: los cuatro sprints "
-             "anteriores ya habían construido las dos puntas, el motor y la aplicación.")
+        "13/10 – 02/11/2026 · 11 items · 64 puntos (54 al arrancar) · completo",
+        ancho=12.0, alcance=a5, cambio=(2, "+10 pts: entran SCRUM-84 y 85"),
+        nota="El alcance original se completó al tercer día: los cuatro sprints anteriores "
+             "ya habían construido el motor y la aplicación. El 15/10 entraron la\n"
+             "actualización de la landing y el despliegue en producción; cerraron el 15/10 "
+             "y el 19/10.")
