@@ -74,25 +74,25 @@
     "curva": [
       {
         "sensibilidad_objetivo": 0.5,
-        "umbral": 0.344339,
+        "umbral": 0.629343,
         "tasa_de_alertas_esperada": 0.1946,
         "tasa_de_alertas_in_sample_optimista": 0.1538
       },
       {
         "sensibilidad_objetivo": 0.6,
-        "umbral": 0.282647,
+        "umbral": 0.555375,
         "tasa_de_alertas_esperada": 0.2523,
         "tasa_de_alertas_in_sample_optimista": 0.2392
       },
       {
         "sensibilidad_objetivo": 0.7,
-        "umbral": 0.224004,
+        "umbral": 0.517434,
         "tasa_de_alertas_esperada": 0.3038,
         "tasa_de_alertas_in_sample_optimista": 0.2854
       },
       {
         "sensibilidad_objetivo": 0.8,
-        "umbral": 0.169515,
+        "umbral": 0.400659,
         "tasa_de_alertas_esperada": 0.4792,
         "tasa_de_alertas_in_sample_optimista": 0.4254
       }
@@ -110,5 +110,5 @@
     "aceptable": true
   },
   "advertencia": "La reduccion de alertas contra NEWS2 NO esta demostrada con esta cohorte: +29,8 % con IC95 [-8,5 %, +44,7 %], que incluye el cero. Ver SCRUM-58.",
-  "generado": "2026-10-13"
+  "generado": "2026-10-19"
 }

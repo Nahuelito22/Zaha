@@ -103,13 +103,14 @@ def _probabilidades_onnx(ruta: Path, X: np.ndarray) -> np.ndarray:
     return np.asarray(probas)[:, 1].astype(float)
 
 
-def verificar_paridad(modelo, ruta_onnx: Path, X: np.ndarray) -> Paridad:
+def verificar_paridad(modelo, ruta_onnx: Path, X: np.ndarray, y: np.ndarray) -> Paridad:
     """
     Compara scikit-learn contra ONNX sobre todas las filas.
 
     Además de la desviación numérica se cuenta, para cada umbral publicado, **cuántos
     pacientes cambiarían de lado**. Es la métrica que importa de verdad: una diferencia de
-    1e-7 en la probabilidad es irrelevante salvo que caiga justo sobre el umbral.
+    1e-7 en la probabilidad es irrelevante salvo que caiga justo sobre el umbral. Por eso
+    usa los MISMOS umbrales que se publican, calculados igual (ver `metadatos`).
     """
     p_sklearn = modelo.predict_proba(X)[:, 1]
     p_onnx = _probabilidades_onnx(ruta_onnx, X)
@@ -118,7 +119,7 @@ def verificar_paridad(modelo, ruta_onnx: Path, X: np.ndarray) -> Paridad:
 
     cambiadas: dict[float, int] = {}
     for objetivo in SENSIBILIDADES_PUBLICADAS:
-        umbral = float(np.quantile(p_sklearn, 1 - objetivo))
+        umbral = alertas.umbral_para_sensibilidad(y, p_sklearn, objetivo)
         cambiadas[objetivo] = int(np.sum((p_sklearn >= umbral) != (p_onnx >= umbral)))
 
     return Paridad(filas=len(X), desviacion_maxima=desviacion, decisiones_cambiadas=cambiadas)
@@ -201,9 +202,15 @@ def metadatos(
     # fuera de fold, no in-sample: el modelo final vio a estos pacientes, asi que su tasa
     # in-sample es optimista y quien elija un umbral leyendo este archivo subestimaria la
     # carga real de alertas. Sobre esta cohorte la diferencia es de 4 a 5 puntos.
+    #
+    # El umbral se corta sobre los pacientes CON el evento: es el más exigente que alcanza
+    # la sensibilidad objetivo. Hasta el 19/10 se cortaba con el percentil de todos los
+    # pacientes, que da un umbral con el que alerta esa fracción de la cohorte (70 % a
+    # sensibilidad 70 %) y no uno que detecta esa fracción de eventos. Lo encontró
+    # SCRUM-69 midiendo contra producción. Ver `alertas.umbral_para_sensibilidad`.
     curva = []
     for objetivo in SENSIBILIDADES_PUBLICADAS:
-        umbral = float(np.quantile(probas, 1 - objetivo))
+        umbral = alertas.umbral_para_sensibilidad(y.astype(bool), probas, objetivo)
         tasa_in = alertas.tasa_alertas_a_sensibilidad(y.astype(bool), probas, objetivo)
         tasa_oof = (
             alertas.tasa_alertas_a_sensibilidad(y.astype(bool), fuera_de_fold, objetivo)
@@ -273,7 +280,8 @@ def construir(procesados: Path, destino: Path, evento: str = "muerte_30d"):
     ruta_onnx = destino / "zaha_baseline.onnx"
     exportar(modelo, X.shape[1], ruta_onnx)
 
-    paridad = verificar_paridad(modelo, ruta_onnx, X)
+    y = df[evento].to_numpy().astype(bool)
+    paridad = verificar_paridad(modelo, ruta_onnx, X, y)
 
     # Los puntajes fuera de fold son los unicos que dan una tasa de alertas honesta.
     oof = baseline.evaluar_anidada(df, evento=evento).puntajes
