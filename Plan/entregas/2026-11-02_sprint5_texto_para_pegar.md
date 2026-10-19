@@ -121,6 +121,14 @@ contribución de cada parámetro, el umbral utilizado, la medición sobre la que
 advertencia de que la reducción de alertas frente a la escala todavía no está demostrada. Es
 la primera vez en el proyecto que las dos mitades aparecen juntas y funcionando.
 
+La figura se rehízo el 19 de octubre. La versión original mostraba un umbral de 0,224, que la
+verificación del sistema publicado, hecha al empezar el sprint siguiente, encontró mal
+calculado: se había tomado sobre todos los pacientes en lugar de sobre los que tuvieron el
+evento, y con él el modelo alertaba al 70 % de los pacientes en vez del 28,5 % que el propio
+sistema declaraba. El error no afectaba al puntaje de la escala ni al resultado de la
+comparativa, que usa el cálculo correcto. Se corrigió, se republicó el servicio y se volvió a
+medir: el umbral pasó a 0,517.
+
 Figura 30. La bitácora de auditoría. Cada acuse de una alerta queda firmado con la identidad
 de quien lo realizó y encadenado criptográficamente al evento anterior: el valor de control
 de cada fila es el del evento previo, de modo que alterar o borrar un registro intermedio
