@@ -282,8 +282,17 @@ function Historial({ tomas }: { tomas: VitalDesglose[] }) {
                   <span className="vital-unit">NEWS2</span>
                 </span>
                 <ChipRiesgo nivel={t.risk_level} />
-                {enmendada && (
+                {enmendada ? (
                   <span className="ctext-xs font-semibold">corregida</span>
+                ) : (
+                  // Sólo la versión vigente se corrige: corregir una ya corregida
+                  // lo rechaza la base, así que ni se ofrece.
+                  <Link
+                    to={`/enmendar/${t.id}`}
+                    className="cbtn cbtn-secondary cbtn-sm no-underline ml-auto"
+                  >
+                    Corregir
+                  </Link>
                 )}
               </div>
 
