@@ -309,6 +309,53 @@ def tasa_alertas_a_sensibilidad(
     return float((np.argmax(alcanza) + 1) / len(y_ord))
 
 
+def umbral_para_sensibilidad(
+    y: "np.ndarray", puntaje: "np.ndarray", objetivo: float, tolerancia: float = 1e-9
+) -> float:
+    """
+    El umbral MÁS EXIGENTE que alcanza al menos `objetivo` de sensibilidad.
+
+    Es el umbral que corresponde a `tasa_alertas_a_sensibilidad`: alertar con
+    `puntaje >= umbral` da exactamente esa tasa y, como mínimo, esa sensibilidad. Las dos
+    funciones recorren el mismo orden y cortan en el mismo lugar.
+
+    POR QUÉ EXISTE — UN ERROR QUE LLEGÓ A PRODUCCIÓN
+    El umbral del modelo publicado se calculaba como `np.quantile(probas, 1 - objetivo)`:
+    el percentil sobre **todos** los pacientes. Eso da un umbral con el que alerta el 70 %
+    de la cohorte, no uno que detecta el 70 % de los eventos. La API operó así desde el
+    Sprint 5 —70 % de alertas contra el 28,5 % que el propio sidecar anunciaba— hasta que
+    `SCRUM-69` pasó la cohorte por el sistema publicado y lo encontró. La sensibilidad se
+    define sobre los que tuvieron el evento, así que el corte también.
+    """
+    import numpy as np
+
+    y = np.asarray(y).astype(bool)
+    puntaje = np.asarray(puntaje, dtype=float)
+
+    orden = np.argsort(-puntaje, kind="stable")
+    y_ord, p_ord = y[orden], puntaje[orden]
+
+    positivos = y_ord.sum()
+    if positivos == 0:
+        return float("nan")
+
+    sensibilidad = np.cumsum(y_ord) / positivos
+    ultimo_del_empate = np.r_[p_ord[1:] != p_ord[:-1], True]
+
+    alcanza = (sensibilidad >= objetivo - tolerancia) & ultimo_del_empate
+    if not alcanza.any():
+        return float("nan")
+    i = int(np.argmax(alcanza))
+    # El corte va a MITAD DE CAMINO entre el último paciente incluido y el siguiente, no
+    # sobre el puntaje del incluido. Da la misma sensibilidad y la misma tasa, pero el
+    # umbral deja de caer exactamente sobre un paciente: así no lo cambian de lado ni la
+    # diferencia de 1e-7 entre ONNX y sklearn ni el redondeo a 6 decimales del sidecar.
+    # Las dos cosas pasaron en las pruebas con el umbral sobre el puntaje.
+    if i + 1 < len(p_ord):
+        return float((p_ord[i] + p_ord[i + 1]) / 2)
+    return float(p_ord[i])
+
+
 # El rango de sensibilidad sobre el que se compara. No es un punto único a propósito: ver
 # `reduccion_relativa`.
 GRILLA_SENSIBILIDAD = (0.50, 0.60, 0.70, 0.80)

@@ -60,7 +60,7 @@ def test_onnx_y_sklearn_dan_la_misma_probabilidad():
     with tempfile.TemporaryDirectory() as tmp:
         ruta = Path(tmp) / "m.onnx"
         exportar.exportar(modelo, X.shape[1], ruta)
-        paridad = exportar.verificar_paridad(modelo, ruta, X)
+        paridad = exportar.verificar_paridad(modelo, ruta, X, df["muerte_30d"].to_numpy().astype(bool))
 
     assert paridad.filas == len(df)
     assert paridad.aceptable, (
@@ -80,7 +80,7 @@ def test_ninguna_decision_cambia_de_lado():
     with tempfile.TemporaryDirectory() as tmp:
         ruta = Path(tmp) / "m.onnx"
         exportar.exportar(modelo, X.shape[1], ruta)
-        paridad = exportar.verificar_paridad(modelo, ruta, X)
+        paridad = exportar.verificar_paridad(modelo, ruta, X, df["muerte_30d"].to_numpy().astype(bool))
 
     for objetivo, cuantas in paridad.decisiones_cambiadas.items():
         assert cuantas == 0, f"{cuantas} decisiones cambian a sensibilidad {objetivo:.0%}"
@@ -121,7 +121,7 @@ def _meta(df):
     with tempfile.TemporaryDirectory() as tmp:
         ruta = Path(tmp) / "m.onnx"
         exportar.exportar(modelo, X.shape[1], ruta)
-        paridad = exportar.verificar_paridad(modelo, ruta, X)
+        paridad = exportar.verificar_paridad(modelo, ruta, X, df["muerte_30d"].to_numpy().astype(bool))
     # Se pasan puntajes fuera de fold reales: sin esto, `tasa_de_alertas_esperada`
     # queda en None y la prueba no ejercita el camino que importa.
     oof = baseline.evaluar_anidada(df, n_externo=3, n_interno=2).puntajes
@@ -152,6 +152,39 @@ def test_los_metadatos_publican_la_curva_de_umbrales():
     assert len(curva) == len(exportar.SENSIBILIDADES_PUBLICADAS)
     assert all("umbral" in p for p in curva)
     assert meta["umbral"]["elegir_es_decision_clinica"] is True
+
+
+def test_el_umbral_publicado_da_la_sensibilidad_que_promete():
+    """
+    El error que llegó a producción (encontrado por SCRUM-69 el 19/10).
+
+    Cada punto de la curva dice "con este umbral, el modelo detecta al menos esta
+    sensibilidad". Hasta el 19/10 el umbral salía del percentil de TODOS los pacientes, y
+    con él alertaba esa fracción de la cohorte —70 % de alertas a "sensibilidad 70 %"—
+    mientras la tasa publicada al lado decía otra cosa. Todas las pruebas pasaban porque
+    nadie verificaba la promesa del umbral, sólo que ONNX y sklearn coincidieran.
+
+    Se verifica sobre el modelo final, que es el que publica el umbral: la sensibilidad
+    alcanzada tiene que llegar al objetivo, y la tasa de alertas con ese umbral tiene que
+    ser la in-sample que el mismo punto declara.
+    """
+    df = _cohorte()
+    meta = _meta(df)
+    modelo = baseline.entrenar(df)
+    probas = modelo.predict_proba(baseline.matriz(df).to_numpy(dtype=float))[:, 1]
+    y = df["muerte_30d"].to_numpy().astype(bool)
+
+    for punto in meta["umbral"]["curva"]:
+        alerta = probas >= punto["umbral"]
+        sensibilidad = alerta[y].mean()
+        assert sensibilidad >= punto["sensibilidad_objetivo"] - 1e-6, (
+            f"el umbral {punto['umbral']} da sensibilidad {sensibilidad:.2f}, "
+            f"no {punto['sensibilidad_objetivo']:.0%}"
+        )
+        assert abs(alerta.mean() - punto["tasa_de_alertas_in_sample_optimista"]) < 1e-3, (
+            f"con el umbral publicado alerta el {alerta.mean():.1%}, pero el mismo punto "
+            f"declara {punto['tasa_de_alertas_in_sample_optimista']:.1%}"
+        )
 
 
 def test_la_curva_distingue_la_tasa_esperada_de_la_in_sample():
@@ -235,6 +268,7 @@ PRUEBAS = [
     test_los_metadatos_congelan_el_orden_de_las_features,
     test_los_metadatos_no_publican_biomarcadores_como_entrada,
     test_los_metadatos_publican_la_curva_de_umbrales,
+    test_el_umbral_publicado_da_la_sensibilidad_que_promete,
     test_la_curva_distingue_la_tasa_esperada_de_la_in_sample,
     test_los_metadatos_declaran_que_la_reduccion_no_esta_demostrada,
     test_los_metadatos_son_json_serializable,
