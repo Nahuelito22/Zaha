@@ -85,6 +85,22 @@ export const RANGOS = {
 
 export type CampoNumerico = keyof typeof RANGOS
 
+export const CAMPOS_NUMERICOS = Object.keys(RANGOS) as CampoNumerico[]
+
+export const VALORES_VACIOS: Record<CampoNumerico, string> = {
+  respiratory_rate: '',
+  oxygen_saturation: '',
+  temperature: '',
+  systolic_bp: '',
+  heart_rate: '',
+}
+
+export function fueraDeRango(campo: CampoNumerico, bruto: string): boolean {
+  if (bruto === '') return false
+  const n = Number(bruto)
+  return Number.isNaN(n) || n < RANGOS[campo].min || n > RANGOS[campo].max
+}
+
 /**
  * Una observación con el aporte de cada parámetro, tal como la devuelve la
  * vista `vital_records_desglose`. Los `sc_*` los calcula la base con las mismas

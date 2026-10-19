@@ -3,12 +3,16 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSesion } from '../auth/sesion'
 import {
+  CAMPOS_NUMERICOS,
   OPCIONES_ACVPU,
   RANGOS,
+  VALORES_VACIOS,
+  fueraDeRango,
   type ACVPU,
   type CampoNumerico,
 } from '../lib/tipos'
 import { ChipRiesgo } from '../componentes/ChipRiesgo'
+import { CamposVitales } from '../componentes/CamposVitales'
 import { encolar, enviarUna, type Puntaje, type TomaEnCola } from '../lib/cola'
 
 type Episodio = {
@@ -33,14 +37,6 @@ function nombrePaciente(e: Episodio): string {
   return e.patients ? `${e.patients.last_name}, ${e.patients.first_name}` : '—'
 }
 
-const VACIO: Record<CampoNumerico, string> = {
-  respiratory_rate: '',
-  oxygen_saturation: '',
-  temperature: '',
-  systolic_bp: '',
-  heart_rate: '',
-}
-
 /**
  * Carga de los 7 parámetros NEWS2 (SCRUM-39 / HU-01).
  *
@@ -55,7 +51,7 @@ export function CargarVitales() {
   const navigate = useNavigate()
 
   const [episodio, setEpisodio] = useState<Episodio | null>(null)
-  const [valores, setValores] = useState<Record<CampoNumerico, string>>(VACIO)
+  const [valores, setValores] = useState<Record<CampoNumerico, string>>(VALORES_VACIOS)
   const [oxigeno, setOxigeno] = useState(false)
   const [acvpu, setAcvpu] = useState<ACVPU | null>(null)
   const [guardando, setGuardando] = useState(false)
@@ -75,20 +71,13 @@ export function CargarVitales() {
       })
   }, [encounterId])
 
-  function fueraDeRango(campo: CampoNumerico): boolean {
-    const bruto = valores[campo]
-    if (bruto === '') return false
-    const n = Number(bruto)
-    return Number.isNaN(n) || n < RANGOS[campo].min || n > RANGOS[campo].max
-  }
-
   // `<dialog>` nativo a propósito: trae el atrapado del foco, el cierre con
   // Escape y el fondo oscurecido sin que haya que implementarlos a mano, que es
   // justo donde las confirmaciones caseras quedan inaccesibles.
   const dialogo = useRef<HTMLDialogElement>(null)
 
-  const camposNumericos = Object.keys(RANGOS) as CampoNumerico[]
-  const hayFueraDeRango = camposNumericos.some(fueraDeRango)
+  const camposNumericos = CAMPOS_NUMERICOS
+  const hayFueraDeRango = camposNumericos.some((c) => fueraDeRango(c, valores[c]))
   const completo =
     camposNumericos.every((c) => valores[c] !== '') && acvpu !== null
   const puedeGuardar = completo && !hayFueraDeRango && !guardando
@@ -167,7 +156,7 @@ export function CargarVitales() {
 
   function limpiar() {
     setResultado(null)
-    setValores(VACIO)
+    setValores(VALORES_VACIOS)
     setOxigeno(false)
     setAcvpu(null)
   }
@@ -298,88 +287,14 @@ export function CargarVitales() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {camposNumericos.map((campo) => {
-          const r = RANGOS[campo]
-          const malo = fueraDeRango(campo)
-          return (
-            <label key={campo} className="flex flex-col gap-1.5">
-              <span className="vital-label">
-                {r.etiqueta} ({r.unidad})
-              </span>
-              <input
-                className="cinput"
-                type="number"
-                inputMode="decimal"
-                step={campo === 'temperature' ? '0.1' : '1'}
-                value={valores[campo]}
-                aria-invalid={malo}
-                aria-describedby={malo ? `${campo}-error` : undefined}
-                onChange={(e) =>
-                  setValores((v) => ({ ...v, [campo]: e.target.value }))
-                }
-                required
-              />
-              {malo && (
-                <span id={`${campo}-error`} className="ctext-2xs font-semibold">
-                  Fuera del rango posible ({r.min}–{r.max} {r.unidad}). Revisá el
-                  valor cargado.
-                </span>
-              )}
-            </label>
-          )
-        })}
-
-        <fieldset className="flex flex-col gap-1.5">
-          <legend className="vital-label">Oxígeno suplementario</legend>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={`cbtn ${oxigeno ? 'cbtn-secondary' : 'cbtn-primary'} flex-1`}
-              aria-pressed={!oxigeno}
-              onClick={() => setOxigeno(false)}
-            >
-              Aire ambiente
-            </button>
-            <button
-              type="button"
-              className={`cbtn ${oxigeno ? 'cbtn-primary' : 'cbtn-secondary'} flex-1`}
-              aria-pressed={oxigeno}
-              onClick={() => setOxigeno(true)}
-            >
-              Con oxígeno
-            </button>
-          </div>
-        </fieldset>
-      </div>
-
-      {/* DESPLEGABLE, NO CINCO BOTONES.
-          Eran cinco destinos táctiles pegados en una grilla de dos columnas, y
-          en un teléfono sostenido con una mano eso es una fuente de toques
-          equivocados: se elige «Confusión nueva» cuando se quiso «Alerta», y
-          ese error cambia el puntaje en 3 puntos y dispara una alerta. El
-          desplegable obliga a un gesto deliberado, garantiza que haya una sola
-          opción elegida, y de paso devuelve el ancho que ocupaban cinco
-          botones. */}
-      <label className="flex flex-col gap-1.5">
-        <span className="vital-label">Nivel de consciencia (ACVPU)</span>
-        <select
-          className="cselect"
-          value={acvpu ?? ''}
-          onChange={(e) => setAcvpu((e.target.value || null) as ACVPU | null)}
-          required
-        >
-          {/* La opción vacía existe para que «todavía no elegí» sea un estado
-              representable. Sin ella el desplegable mostraría «Alerta» de
-              entrada y un campo sin tocar parecería contestado. */}
-          <option value="">Elegir nivel…</option>
-          {OPCIONES_ACVPU.map((o) => (
-            <option key={o.valor} value={o.valor}>
-              {o.sigla} · {o.texto}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CamposVitales
+        valores={valores}
+        onValor={(campo, v) => setValores((prev) => ({ ...prev, [campo]: v }))}
+        oxigeno={oxigeno}
+        onOxigeno={setOxigeno}
+        acvpu={acvpu}
+        onAcvpu={setAcvpu}
+      />
 
       {error && (
         <p role="alert" className="panel ctext-sm font-semibold">

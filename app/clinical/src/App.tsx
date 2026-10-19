@@ -4,6 +4,7 @@ import { Login } from './paginas/Login'
 import { Sala } from './paginas/Sala'
 import { CargarVitales } from './paginas/CargarVitales'
 import { DetallePaciente } from './paginas/DetallePaciente'
+import { EnmendarToma } from './paginas/EnmendarToma'
 import { EstadoCola } from './componentes/EstadoCola'
 import { ROL_LEGIBLE } from './lib/tipos'
 
@@ -135,6 +136,14 @@ export default function App() {
               element={
                 <Privado>
                   <DetallePaciente />
+                </Privado>
+              }
+            />
+            <Route
+              path="/enmendar/:tomaId"
+              element={
+                <Privado>
+                  <EnmendarToma />
                 </Privado>
               }
             />
