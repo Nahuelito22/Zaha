@@ -19,6 +19,7 @@ se movieron a `scripts/`.
 | `05_PREPARACION.md` | Método de trabajo: notebooks, entorno, local vs nube |
 | `epica_02_backend_news2/` | Esquema de base y motor NEWS2 |
 | `epica_04_motor_ia/` | Definición de la etiqueta y el caveat de NEWS2 en urgencias |
+| `epica_06_regulatorio/` | ANMAT, seguridad de la base, FHIR, gestión de riesgos y leyes de datos de salud |
 | `jira_export.py` + `jira_*.csv` | Genera los CSV importables a Jira desde el backlog |
 
 ## Los ADR, de un vistazo
