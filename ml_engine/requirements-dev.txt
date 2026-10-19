@@ -24,6 +24,10 @@ polars~=1.44.1           # para los pasos donde pandas se queda corto en memoria
 # --- Validación de esquemas (SCRUM-52) ---
 pandera~=0.32.1
 
+# --- Interoperabilidad FHIR (SCRUM-71) ---
+jsonschema~=4.26.0       # valida el Bundle contra el esquema oficial de FHIR R4. Ya llegaba
+                         # como dependencia de jupyter; se declara para no depender de eso
+
 # --- Pruebas de la API (SCRUM-62) ---
 httpx~=0.28.1            # lo exige fastapi.testclient; no va a produccion, solo prueba
 
