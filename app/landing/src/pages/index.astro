@@ -3,22 +3,28 @@ import '../styles/global.css'
 import DemoMotor from '../components/DemoMotor.astro'
 import { ANCHO, ALTO, SIMBOLOS, CENTROS_ESPIRALES } from '../marca/z-simbolos'
 
-// Los cinco símbolos de la Z, en el orden en que se encienden en la intro.
-// Los moldes salen de app/landing/scripts/vectorizar_z.py.
-const simbolos = Object.entries(SIMBOLOS)
+// El orden en que se encienden los cinco símbolos de la Z en la intro. Los
+// moldes salen de app/landing/scripts/vectorizar_z.py, que los genera en otro
+// orden; acá se reordenan. Tierra va ÚLTIMA porque su molde es la Z entera
+// (64.687 px contra 19.137 del siguiente): es el pulso que la ilumina toda, y
+// cierra la secuencia antes del vuelo al sello.
+const ORDEN = ['caminos', 'corazon', 'conexion', 'equilibrio', 'tierra'] as const
+const simbolos = ORDEN.map((nombre) => [nombre, SIMBOLOS[nombre]] as const)
 const zPng = '/marca/zaha-z.png'
 
 // Lo que dice cada símbolo mientras se enciende: su nombre en la lámina
-// de marca y qué hace Zaha que tenga que ver. Mismo orden que SIMBOLOS.
-// Solo cosas que la app HACE; la última es objetivo, no resultado (la
+// de marca y qué hace Zaha que tenga que ver. Va por nombre y no por posición,
+// para que cambiar ORDEN no deje un lema pegado al símbolo equivocado.
+// Solo cosas que la app HACE; Equilibrio es objetivo, no resultado (la
 // reducción de alertas todavía tiene un IC que cruza el cero).
-const lemas = [
-	{ simbolo: 'Caminos de la vida', texto: 'El historial de cada paciente, toma a toma.' },
-	{ simbolo: 'Corazón · Cuidado', texto: 'Hecho para enfermería, al pie de la cama.' },
-	{ simbolo: 'Conexión · Energía', texto: 'Sigue funcionando sin señal y sincroniza al volver.' },
-	{ simbolo: 'Tierra · Origen', texto: 'Cada puntaje muestra de dónde sale.' },
-	{ simbolo: 'Equilibrio · Armonía', texto: 'Alertar a tiempo, sin saturar de alarmas.' },
-]
+const LEMAS: Record<(typeof ORDEN)[number], { simbolo: string; texto: string }> = {
+	caminos: { simbolo: 'Caminos de la vida', texto: 'El historial de cada paciente, toma a toma.' },
+	corazon: { simbolo: 'Corazón · Cuidado', texto: 'Hecho para enfermería, al pie de la cama.' },
+	conexion: { simbolo: 'Conexión · Energía', texto: 'Sigue funcionando sin señal y sincroniza al volver.' },
+	equilibrio: { simbolo: 'Equilibrio · Armonía', texto: 'Alertar a tiempo, sin saturar de alarmas.' },
+	tierra: { simbolo: 'Tierra · Origen', texto: 'Cada puntaje muestra de dónde sale.' },
+}
+const lemas = ORDEN.map((nombre) => LEMAS[nombre])
 
 // SCRUM-35. Dirección visual elegida con Nahuel sobre un lienzo de tres bocetos:
 // bloque terracota lleno arriba, el tablero real montado encima, cuatro cajas y
@@ -211,6 +217,13 @@ const capacidades = [
 						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
 					</span>
 				</span>
+				<!-- En pantallas táctiles la intro no avanza con el scroll sino con
+				     este botón, un pulso por toque (ver el script). Nace oculto: sin
+				     JS no hay nada que avanzar. -->
+				<button class="intro-seguir btn btn-primary btn-touch" type="button" hidden>
+					<span class="intro-seguir-texto">Continuar</span>
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+				</button>
 			</div>
 		</section>
 
@@ -564,7 +577,7 @@ const capacidades = [
 			   El script publica, todas de 0 a 1:
 			   --p       el avance; se van el nombre y la pista
 			   --g0..4   la luz de cada símbolo, que sube y vuelve a la piedra:
-			             Caminos → Corazón → Conexión → Tierra → Equilibrio
+			             Caminos → Corazón → Conexión → Equilibrio → Tierra
 			   --q       el vuelo: la Z viaja y se achica hasta el sello de la
 			             barra de navegación (--dx, --dy, --s en píxeles/escala)
 			   --f       la capa crema se desvanece y deja ver la landing */
@@ -668,6 +681,29 @@ const capacidades = [
 				opacity: calc(1 - clamp(0, var(--p) / 0.04, 1));
 			}
 			.intro-pista-in { display: inline-flex; flex-direction: column; align-items: center; gap: 4px; }
+
+			/* Modo por pasos (.intro-pasos en el body, pantallas táctiles). En el
+			   teléfono el scroll por inercia se pasaba de largo: un deslizamiento
+			   corto recorría media intro y dejaba ver la landing con la Z a mitad
+			   de vuelo. Acá no hay recorrido de scroll: la página queda trabada
+			   arriba y cada toque del botón avanza un pulso. */
+			.intro-pasos .escenario-cola { height: 0; }
+			html.intro-trabada, html.intro-trabada body { overflow: hidden; overscroll-behavior: none; }
+			.intro-pasos .intro-pista { display: none; }
+			.intro-seguir {
+				position: absolute; bottom: max(var(--space-6), env(safe-area-inset-bottom));
+				/* La capa no toma clics (ver .intro-escena); el botón sí. */
+				pointer-events: auto;
+				display: inline-flex; align-items: center; gap: var(--space-2);
+				/* Se va con el vuelo de la Z, igual que se iba la pista. */
+				opacity: calc(1 - var(--q));
+			}
+			.intro-seguir[hidden] { display: none; }
+			.intro-seguir:disabled { cursor: default; }
+			@media (prefers-reduced-motion: no-preference) {
+				.intro-seguir { animation: asomar 0.8s ease-out 1.8s backwards; }
+			}
+			.intro-forzada .intro-seguir { animation: asomar 0.8s ease-out 1.8s backwards; }
 
 			/* La entrada al cargar: la Z se "talla" (aparece desde el centro y
 			   se enfoca) y después llegan el nombre y la pista. Solo corre una
@@ -1043,18 +1079,23 @@ const capacidades = [
 			const marco = document.querySelector<HTMLElement>('.intro-z-marco')
 			const sello = document.querySelector<HTMLElement>('.marca-sello img')
 
+			// En pantallas táctiles la intro avanza por pasos, con un botón: el
+			// scroll por inercia del teléfono se pasaba de largo y dejaba ver la
+			// landing con la Z a mitad de camino. Con mouse sigue siendo el scroll.
+			// ?pasos lo fuerza con mouse: para probarlo en la PC y para presentar
+			// desde un proyector manejando la intro con clics.
+			const tactil =
+				window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+				new URLSearchParams(window.location.search).has('pasos')
+			const seguir = document.querySelector<HTMLButtonElement>('.intro-seguir')
+
 			if (intro && escenario && cola && marco && sello && (forzar || !reducir.matches)) {
 				intro.classList.add('intro-viva')
 				document.body.classList.add('con-intro')
 				if (forzar) intro.classList.add('intro-forzada')
-				let pendiente = false
 
-				const pintar = () => {
-					pendiente = false
-					const recorrido = cola.offsetHeight
-					const hecho = window.scrollY - escenario.offsetTop
-					const p = acotar(recorrido > 0 ? hecho / recorrido : 1)
-
+				// El avance lo calcula cada modo; esto solo lo dibuja.
+				const pintarEn = (p: number) => {
 					// El vuelo: del centro de la Z grande al centro del sello. La
 					// escena es fija en (0,0), así que offsetLeft/Top ya son
 					// coordenadas de pantalla, y no incluyen la transformación.
@@ -1078,16 +1119,88 @@ const capacidades = [
 					intro.classList.toggle('intro-fin', p >= 1)
 					document.body.classList.toggle('intro-en-curso', p < 1)
 				}
-				const pedir = () => {
-					if (!pendiente) {
-						pendiente = true
-						requestAnimationFrame(pintar)
-					}
-				}
 
-				window.addEventListener('scroll', pedir, { passive: true })
-				window.addEventListener('resize', pedir)
-				pintar()
+				if (tactil && seguir) {
+					// ── Por pasos ──────────────────────────────────────────────
+					// Cada toque lleva el avance al pico del símbolo siguiente, y el
+					// último, de la Tierra encendida al final del vuelo. Es el MISMO
+					// avance que publica el scroll, así que el dibujo no cambia: solo
+					// quién decide cuánto avanzar.
+					const PARADAS = [0, ...PICOS, 1]
+					const texto = seguir.querySelector<HTMLElement>('.intro-seguir-texto')
+					const raiz = document.documentElement
+					let parada = 0
+					let actual = 0
+
+					document.body.classList.add('intro-pasos')
+					raiz.classList.add('intro-trabada')
+					seguir.hidden = false
+
+					// iOS ignora el overflow hidden del body para el arrastre: sin
+					// esto, un deslizamiento todavía movía la página por debajo.
+					const sinArrastre = (e: TouchEvent) => e.preventDefault()
+					window.addEventListener('touchmove', sinArrastre, { passive: false })
+
+					const etiquetar = () => {
+						// El último toque es el que entra: el botón lo dice.
+						if (texto) texto.textContent = parada === PARADAS.length - 2 ? 'Entrar' : 'Continuar'
+					}
+
+					const ir = (destino: number, ms: number, alTerminar?: () => void) => {
+						const desde = actual
+						const t0 = performance.now()
+						const cuadro = (ahora: number) => {
+							const t = acotar((ahora - t0) / ms)
+							actual = desde + (destino - desde) * suave(t)
+							pintarEn(actual)
+							if (t < 1) requestAnimationFrame(cuadro)
+							else alTerminar?.()
+						}
+						requestAnimationFrame(cuadro)
+					}
+
+					seguir.addEventListener('click', () => {
+						if (seguir.disabled || parada >= PARADAS.length - 1) return
+						parada += 1
+						seguir.disabled = true
+						const final = parada === PARADAS.length - 1
+						// El vuelo dura más que un pulso: es el cierre, y apurado la Z
+						// llegaba al sello sin que se entendiera de dónde venía.
+						ir(PARADAS[parada], final ? 1600 : 900, () => {
+							if (final) {
+								raiz.classList.remove('intro-trabada')
+								window.removeEventListener('touchmove', sinArrastre)
+								seguir.hidden = true
+							} else {
+								seguir.disabled = false
+								etiquetar()
+							}
+						})
+					})
+
+					window.addEventListener('resize', () => pintarEn(actual))
+					etiquetar()
+					pintarEn(0)
+				} else {
+					// ── Con el scroll ──────────────────────────────────────────
+					let pendiente = false
+					const pintar = () => {
+						pendiente = false
+						const recorrido = cola.offsetHeight
+						const hecho = window.scrollY - escenario.offsetTop
+						pintarEn(acotar(recorrido > 0 ? hecho / recorrido : 1))
+					}
+					const pedir = () => {
+						if (!pendiente) {
+							pendiente = true
+							requestAnimationFrame(pintar)
+						}
+					}
+
+					window.addEventListener('scroll', pedir, { passive: true })
+					window.addEventListener('resize', pedir)
+					pintar()
+				}
 			}
 		</script>
 	</body>
