@@ -148,8 +148,9 @@ se pierde el Space justo antes de la demo. Un health check de frente no tiene es
 **Fecha:** 2026-08-25 · **Estado:** ✅ Aceptada · **Refina a:** ADR-003
 
 ### Contexto
-La revisión de literatura (NotebookLM, 300+ fuentes) aportó evidencia que obliga a
-corregir el objetivo original. Estudio de Oxford (2026), cohorte a gran escala:
+La revisión de literatura (NotebookLM; 141 fuentes en el cuaderno al 25/10, ver `Plan/epica_04_motor_ia/05_referencias.md`) aportó evidencia que obliga a
+corregir el objetivo original. Estudio de Oxford (Zhang et al., 2026, *preprint* de medRxiv
+sin revisión por pares; 443.807 internaciones, muerte a 24 h), con signos vitales solos:
 
 | Modelo | AUROC |
 |---|---|
@@ -175,10 +176,18 @@ con NEWS2 ≥ 5. Secundarias: AUPRC, número necesario a alertar (NNA).
 ### Razón
 La literatura documenta que el problema real no es la precisión sino el ruido:
 NEWS2 con umbral ≥5 genera **37.6 alertas por 100 pacientes-día**, afecta al **12.3%
-de los pacientes diariamente**, y el **83.7% de los clínicos considera inútiles las
-alertas actuales**. Detectar lo mismo molestando menos es clínicamente más valioso
-que 1.7 puntos de AUROC, y conecta directo con la justificación de sobrecarga
-cognitiva y burnout del documento original del proyecto.
+de los pacientes diariamente** y aun así detecta menos de la mitad de los desenlaces
+(sensibilidad 0,46; Pankhurst et al., *BMJ Open* 2022, 100.362 internaciones). Del lado
+de quien recibe las alertas, en una encuesta a residentes de un hospital académico sólo el
+**16,3 % encontró útiles las herramientas de alerta de sepsis**, y la fatiga de alertas fue
+la queja principal (Hijjawi y Ssentongo, *Front Med* 2026). Detectar lo mismo molestando
+menos es clínicamente más valioso que 1.7 puntos de AUROC, y conecta directo con la
+justificación de sobrecarga cognitiva y burnout del documento original del proyecto.
+
+> **Corregido el 25/10 (`SCRUM-83`).** Esta sección decía que "el 83,7 % de los clínicos
+> considera inútiles las alertas actuales". Esa cifra no está en ninguna fuente: era
+> 100 − 16,3, y generalizaba a todos los clínicos una encuesta de 80 residentes sobre alertas
+> de sepsis. Citas completas en `Plan/epica_04_motor_ia/05_referencias.md`.
 
 ### Consecuencia sobre el rol de la LSTM
 La LSTM deja de ser la protagonista y pasa a ser **la hipótesis bajo prueba**:
@@ -200,10 +209,15 @@ reportable**. El proyecto deja de depender de que la LSTM funcione.
 **Fecha:** 2026-08-25 · **Estado:** ✅ Aceptada
 
 ### Contexto
-La literatura documenta que NEWS2 **cae significativamente en urgencias** para
-subgrupos específicos: sepsis (AUROC 0.66) y COVID-19 (AUROC 0.59), por hipoxemia
-silenciosa e hiperlactatemia no integrada en la escala. NEWS2 fue diseñado para
-**sala general**, no para guardia.
+La literatura documenta que NEWS2 **cae en urgencias** para subgrupos específicos. En una
+guardia de Malasia (Mhd Yunin y Tan, *PLoS ONE* 2025, 1.906 adultos), el AUROC de NEWS2
+para **mortalidad** fue 0,86 en toda la cohorte pero 0,66 en sepsis (159 pacientes) y 0,59
+en COVID-19 (40 pacientes, IC 95 % 0,28–0,89: demasiado pocos para afirmar mucho). NEWS2
+fue diseñado para **sala general**, no para guardia.
+
+*(Corregido el 25/10, `SCRUM-83`: antes decía "sepsis AUROC 0.66" sin aclarar que es para
+mortalidad, y atribuía la caída a la hipoxemia silenciosa, cosa que no se verificó en la
+fuente.)*
 
 ### Decisión
 **Se mantiene MIMIC-IV-ED** como fuente principal, pero:

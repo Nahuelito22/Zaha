@@ -53,6 +53,8 @@ RIESGOS_QUE_ALERTAN = ("Medio Bajo", "Medio", "Alto")
 # La referencia de la literatura, para tenerla al lado del número propio. Medida en SALA
 # GENERAL, no en guardia, y sobre otra población: NO es un objetivo ni un umbral, es
 # contexto. Compararse contra ella directamente es justo lo que este módulo evita.
+# Fuente: Pankhurst et al., BMJ Open 2022;12(2):e054027, doi:10.1136/bmjopen-2021-054027
+# (Index-NEWS2 >= 5, 100.362 internaciones). Ver Plan/epica_04_motor_ia/05_referencias.md.
 REFERENCIA_LITERATURA_POR_100_PACIENTE_DIA = 37.6
 
 
