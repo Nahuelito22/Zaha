@@ -66,7 +66,7 @@ cd ml_engine
 
 ## Pruebas
 
-125 pruebas. Corren con y sin pytest:
+177 pruebas en 12 archivos (verificado el 25/10). Corren con y sin pytest:
 
 ```bash
 for t in tests/*.py; do .venv/Scripts/python "$t"; done
