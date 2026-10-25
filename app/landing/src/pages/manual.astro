@@ -1,0 +1,494 @@
+---
+import '../styles/global.css'
+
+// El manual de uso para enfermería, en versión ilustrada (SCRUM-78).
+//
+// El texto sale de app/clinical/MANUAL_ENFERMERIA.md, que se escribió leyendo el
+// código de cada pantalla: los botones, los rangos y los plazos son los reales. Si
+// la app cambia, se cambian los dos. Las capturas son de la app en producción, en
+// un ancho de teléfono (390 px), con los pacientes ficticios de la sala.
+//
+// Cada paso es un dato y no markup suelto: así el índice lateral y los pasos no
+// pueden quedar desfasados.
+
+type Paso = {
+	id: string
+	titulo: string
+	img?: { src: string; alt: string }
+	cuerpo: string
+	ojo?: string
+}
+
+const pasos: Paso[] = [
+	{
+		id: 'entrar',
+		titulo: 'Entrar',
+		img: { src: '/manual/01-login.png', alt: 'Pantalla de ingreso de Zaha, con los campos de correo y contraseña.' },
+		cuerpo: `
+			<p>Entrá a <strong>zahasalud.com.ar/app</strong> desde la tablet, el teléfono o la computadora, e ingresá tu <strong>correo</strong> y tu <strong>contraseña</strong>.</p>
+			<ul>
+				<li>Las cuentas <strong>no se crean desde la app</strong>: te la da jefatura o el administrador del sistema.</li>
+				<li>Si algo está mal, la app dice <em>"Correo o contraseña incorrectos"</em> sin aclarar cuál de los dos. Es a propósito.</li>
+				<li>Si ves <em>"Tu usuario no tiene perfil activo"</em>, tu cuenta existe pero todavía no la habilitaron.</li>
+			</ul>`,
+		ojo: 'Cada toma queda firmada por quien tiene la sesión abierta. Si la tablet es compartida, tocá <strong>Salir</strong> al terminar.',
+	},
+	{
+		id: 'sala',
+		titulo: 'La sala',
+		img: { src: '/manual/02-sala.png', alt: 'La sala en un teléfono: una tarjeta por cama, ordenadas de mayor a menor riesgo, con el puntaje NEWS2 y el nivel de cada paciente.' },
+		cuerpo: `
+			<p>Es la pantalla principal: una fila por cama ocupada, <strong>ordenadas por riesgo</strong>. Arriba está el paciente que más necesita que lo mires.</p>
+			<ul>
+				<li>Cada fila muestra la <strong>cama</strong>, el <strong>puntaje NEWS2</strong>, el <strong>nivel</strong> y <strong>cuánto hace</strong> de la última toma. Pasadas las 8 horas, la antigüedad se resalta.</li>
+				<li>Un paciente recién internado aparece como <strong>"sin score"</strong> y <strong>"sin tomas"</strong>: no es riesgo bajo, es que todavía nadie le cargó vitales.</li>
+				<li>Arriba dice <em>"actualización en vivo"</em>: lo que carga otra persona aparece solo. Si dice <em>"sin actualización en vivo"</em>, recargá la página.</li>
+			</ul>
+			<p>Cada paciente tiene dos botones: <strong>Historial</strong> y <strong>Cargar vitales</strong>, siempre a la derecha, al alcance del pulgar.</p>`,
+	},
+	{
+		id: 'cargar',
+		titulo: 'Cargar una toma',
+		img: { src: '/manual/03-carga.png', alt: 'El formulario de carga con los siete parámetros de NEWS2 completos.' },
+		cuerpo: `
+			<p>Tocá <strong>Cargar vitales</strong> en la cama del paciente y <strong>verificá el nombre</strong> arriba antes de empezar. Se cargan <strong>los 7 parámetros, todos</strong>: con uno vacío no se puede guardar, porque un NEWS2 incompleto da un número más bajo que el real.</p>
+			<table>
+				<thead><tr><th>Parámetro</th><th>Rango que acepta</th></tr></thead>
+				<tbody>
+					<tr><td>Frecuencia respiratoria</td><td>0 a 80 rpm</td></tr>
+					<tr><td>Saturación de oxígeno</td><td>50 a 100 %</td></tr>
+					<tr><td>Temperatura</td><td>25 a 45 °C</td></tr>
+					<tr><td>Presión sistólica</td><td>30 a 300 mmHg</td></tr>
+					<tr><td>Frecuencia cardíaca</td><td>0 a 300 lpm</td></tr>
+					<tr><td>Oxígeno suplementario</td><td>Aire ambiente o con oxígeno</td></tr>
+					<tr><td>Consciencia (ACVPU)</td><td>Se elige de la lista</td></tr>
+				</tbody>
+			</table>
+			<p>Un valor fuera de rango se marca debajo del campo: casi siempre es un error de tipeo, como un 8 en lugar de un 80.</p>`,
+		ojo: 'La <strong>C</strong> de ACVPU es <em>confusión nueva</em> y suma 3 puntos por sí sola. La lista arranca en "Elegir nivel…" para que nunca quede "Alerta" elegido sin mirarlo.',
+	},
+	{
+		id: 'confirmar',
+		titulo: 'Confirmar',
+		img: { src: '/manual/04-confirmar.png', alt: 'El resumen de confirmación, que repite los siete valores antes de guardar.' },
+		cuerpo: `
+			<p>Al tocar <strong>Guardar toma</strong> se abre un resumen con los siete valores. <strong>Leelo</strong>: es la última oportunidad de cazar un error.</p>
+			<ul>
+				<li><strong>Confirmar y guardar</strong> registra la toma. El puntaje lo calcula el servidor, nunca la pantalla.</li>
+				<li><strong>Volver a revisar</strong> cierra el resumen sin guardar.</li>
+			</ul>
+			<p>Si no había señal, la toma queda <strong>guardada en el dispositivo</strong> y se envía sola cuando vuelve la conexión. Mientras tanto no tiene puntaje: la app no inventa uno aproximado.</p>`,
+		ojo: 'Una toma guardada no se borra ni se edita. Si te equivocaste, se corrige (paso 8), y las dos quedan en el historial.',
+	},
+	{
+		id: 'niveles',
+		titulo: 'Leer el nivel de riesgo',
+		cuerpo: `
+			<table>
+				<thead><tr><th>Nivel</th><th>Cuándo</th><th>Alerta</th></tr></thead>
+				<tbody>
+					<tr><td><strong>Bajo</strong></td><td>Puntaje 0 a 4, ningún parámetro en 3</td><td>No</td></tr>
+					<tr><td><strong>Medio Bajo</strong></td><td>Puntaje 0 a 4, pero un parámetro solo suma 3 (el "rojo aislado")</td><td>Sí</td></tr>
+					<tr><td><strong>Medio</strong></td><td>Puntaje 5 o 6</td><td>Sí</td></tr>
+					<tr><td><strong>Alto</strong></td><td>Puntaje 7 o más</td><td>Sí</td></tr>
+				</tbody>
+			</table>
+			<p>Cada nivel tiene su color <strong>y su forma</strong>, y el nombre siempre está escrito: no hace falta distinguir colores para leerlo.</p>`,
+	},
+	{
+		id: 'detalle',
+		titulo: 'El detalle del paciente',
+		img: { src: '/manual/05-detalle.png', alt: 'El detalle de un paciente: el puntaje NEWS2 vigente y el aporte de cada uno de los siete parámetros.' },
+		cuerpo: `
+			<p>Tocá el nombre en la sala. Arriba está el <strong>puntaje vigente</strong>, con la hora de la toma, y debajo el <strong>aporte de cada parámetro</strong>.</p>
+			<p>Ese desglose responde de dónde sale el número: un 7 que sale entero de la frecuencia respiratoria no pide lo mismo que un 7 repartido. Un parámetro que suma 3, el máximo, aparece con <strong>borde rojo</strong>.</p>
+			<p>Más abajo están la estimación del modelo, las alertas por atender y el historial.</p>`,
+	},
+	{
+		id: 'alertas',
+		titulo: 'Atender una alerta',
+		img: { src: '/manual/06-alertas.png', alt: 'Una alerta pendiente con sus dos botones: Validar y Posponer 30 minutos.' },
+		cuerpo: `
+			<p>Cuando una toma da un nivel distinto de Bajo, se genera una alerta en <strong>Alertas por atender</strong>. Se resuelve con <strong>un solo toque</strong>:</p>
+			<ul>
+				<li><strong>Validar</strong>: la viste y la estás atendiendo.</li>
+				<li><strong>Posponer 30 min</strong>: se va y <strong>vuelve sola</strong> a los 30 minutos, avisando que el plazo venció.</li>
+			</ul>
+			<p>Posponer no es descartar. Cada acción queda registrada con tu nombre y la hora en una bitácora que no se puede modificar.</p>`,
+	},
+	{
+		id: 'modelo',
+		titulo: 'La estimación del modelo',
+		img: { src: '/manual/07-estimacion.png', alt: 'El bloque violeta de la estimación del modelo, con la probabilidad, los parámetros que más pesan y el desglose abierto.' },
+		cuerpo: `
+			<p>El bloque <strong>violeta con borde punteado</strong> es un modelo de IA que estima el riesgo con los mismos signos vitales y la edad. <strong>No es NEWS2</strong>, y por eso se ve distinto.</p>
+			<ul>
+				<li><strong>La escala manda.</strong> Las alertas que se atienden salen de NEWS2, no del modelo.</li>
+				<li>Una línea nombra los parámetros que más empujan la estimación. <em>Ver desglose completo</em> muestra cuánto pesa cada uno y los límites del modelo.</li>
+				<li>Si dice <strong>"sin estimación"</strong>, el servicio tardó en responder. No pasa nada: la escala no depende de él.</li>
+			</ul>`,
+		ojo: 'Que el modelo alerte menos que NEWS2 con la misma sensibilidad <strong>todavía no está demostrado</strong>. Es un complemento en evaluación, y así lo dice en cada estimación.',
+	},
+	{
+		id: 'corregir',
+		titulo: 'Corregir un dato mal cargado',
+		img: { src: '/manual/08-corregir.png', alt: 'La corrección de una toma: el resumen muestra el valor de antes y el de después, y el motivo.' },
+		cuerpo: `
+			<p>Una toma guardada no se borra: se <strong>corrige</strong>. En el <strong>Historial</strong>, tocá <strong>Corregir</strong> en la toma equivocada.</p>
+			<ol>
+				<li>El formulario arranca con los valores que se cargaron: cambiá solo el que está mal.</li>
+				<li>Escribí el <strong>motivo</strong>, por ejemplo "se tipeó 8 en lugar de 18". Mínimo 10 caracteres; queda visible para siempre.</li>
+				<li>El resumen muestra cada cambio como <strong>antes → después</strong>. Revisalo y confirmá.</li>
+			</ol>
+			<p>La original queda en el historial marcada como <strong>corregida</strong>, y si tenía una alerta pendiente se cierra con tu nombre y el motivo. La hora de la toma no cambia.</p>`,
+		ojo: 'No cargues una toma nueva para "pisar" la equivocada: quedarían dos tomas válidas en lugar de una errónea y su corrección.',
+	},
+	{
+		id: 'offline',
+		titulo: 'Sin conexión',
+		cuerpo: `
+			<p>Si se corta la red mientras cargás, la toma <strong>no se pierde</strong>. Arriba de cualquier pantalla aparece <em>"N tomas guardadas en este dispositivo, sin enviar"</em>, con el paciente y la hora de cada una.</p>
+			<ul>
+				<li>Se envían solas cuando vuelve la conexión, o con <strong>Enviar ahora</strong>.</li>
+				<li>La hora registrada es la de la toma, no la del envío.</li>
+				<li>Mientras no se envíen, no tienen puntaje.</li>
+			</ul>`,
+		ojo: 'No cierres sesión ni borres los datos del navegador con tomas pendientes: están en ese dispositivo y en ningún otro lado. Las correcciones, en cambio, no se guardan sin conexión.',
+	},
+]
+
+const preguntas = [
+	{ p: '¿Por qué no puedo guardar con un parámetro vacío?', r: 'Porque NEWS2 se calcula con los siete. Con seis daría un número más bajo que el real.' },
+	{ p: 'El paciente se ve bien pero la app dice Medio Bajo.', r: 'Hay un parámetro que suma 3 por sí solo. Fijate cuál en el aporte de cada parámetro: puede ser un error de carga o un signo real que hay que revisar.' },
+	{ p: 'El modelo dice "alerta" y NEWS2 dice Bajo. ¿A cuál le hago caso?', r: 'A NEWS2 y a tu criterio clínico. El modelo es un complemento en evaluación.' },
+	{ p: '¿Quién ve lo que cargo?', r: 'Solo el personal con cuenta activa. Cada toma y cada acción sobre una alerta quedan firmadas con tu usuario.' },
+]
+---
+
+<html lang="es-AR">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="icon" href="/favicon.ico" sizes="48x48" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<meta name="theme-color" content="#8c491a" />
+		<link rel="canonical" href="https://zahasalud.com.ar/manual" />
+		<meta property="og:type" content="article" />
+		<meta property="og:locale" content="es_AR" />
+		<meta property="og:site_name" content="Zaha" />
+		<meta property="og:url" content="https://zahasalud.com.ar/manual" />
+		<meta property="og:title" content="Manual de uso — Zaha" />
+		<meta property="og:description" content="Cómo usar Zaha al pie de la cama, paso a paso: la sala, la carga de signos vitales, las alertas y la estimación del modelo." />
+		<meta property="og:image" content="https://zahasalud.com.ar/og.png" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			rel="preload"
+			as="style"
+			href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap"
+			onload="this.onload=null;this.rel='stylesheet'"
+		/>
+		<noscript>
+			<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo:wght@400&family=Figtree:wght@400;600;700&display=swap" />
+		</noscript>
+		<meta name="description" content="Manual de uso de Zaha para enfermería: la sala, la carga de signos vitales, los niveles de riesgo, las alertas, la estimación del modelo y cómo corregir un dato." />
+		<title>Manual de uso — Zaha</title>
+	</head>
+	<body class="zaha-brand">
+		<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+		<div class="bloque">
+			<div class="env">
+				<header class="barra">
+					<a class="marca" href="/">
+						<span class="marca-sello"><img src="/marca/zaha-z.png" alt="" width="467" height="500" /></span>
+						Zaha
+					</a>
+					<nav aria-label="Secciones">
+						<a href="/">Inicio</a>
+						<a href="/manual" aria-current="page">Manual</a>
+						<a class="entrar" href="/app/">Entrar</a>
+					</nav>
+				</header>
+
+				<div class="hero">
+					<span class="kicker">Manual de uso · Enfermería</span>
+					<h1>Zaha, al pie de la cama.</h1>
+					<p class="entrada">
+						Todo lo que hace falta para usar la aplicación en una ronda: cargar los signos
+						vitales, leer el riesgo, atender una alerta y corregir un dato. Diez pasos, con
+						las pantallas reales.
+					</p>
+					<ul class="datos-rapidos">
+						<li><strong>7</strong> parámetros por toma</li>
+						<li><strong>1</strong> toque para atender una alerta</li>
+						<li><strong>0</strong> datos que se borran</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="env aviso-proto" role="note">
+			<p>
+				<strong>Prototipo académico. No es un dispositivo médico</strong>: no lo uses con pacientes
+				reales. Los pacientes de las capturas son ficticios.
+			</p>
+		</div>
+
+		<div class="env cuerpo">
+			<nav class="indice" aria-label="Pasos del manual">
+				<p class="indice-titulo">En este manual</p>
+				<ol>
+					{pasos.map((p) => <li><a href={`#${p.id}`}>{p.titulo}</a></li>)}
+					<li class="indice-extra"><a href="#preguntas">Preguntas frecuentes</a></li>
+				</ol>
+			</nav>
+
+			<main id="contenido">
+				{pasos.map((p, i) => (
+					<section class={`paso${p.img ? '' : ' paso-sin-imagen'}`} id={p.id} aria-labelledby={`h-${p.id}`}>
+						<div class="paso-texto">
+							<span class="paso-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+							<h2 id={`h-${p.id}`}>{p.titulo}</h2>
+							<div class="prosa" set:html={p.cuerpo} />
+							{p.ojo && (
+								<aside class="ojo">
+									<span class="ojo-etiqueta">Ojo</span>
+									<p set:html={p.ojo} />
+								</aside>
+							)}
+						</div>
+						{p.img && (
+							<figure class="pantalla">
+								<div class="telefono">
+									<img src={p.img.src} alt={p.img.alt} width="390" height="844" loading={i < 2 ? 'eager' : 'lazy'} />
+								</div>
+							</figure>
+						)}
+					</section>
+				))}
+
+				<section class="paso paso-sin-imagen" id="preguntas" aria-labelledby="h-preguntas">
+					<div class="paso-texto">
+						<span class="paso-num" aria-hidden="true">?</span>
+						<h2 id="h-preguntas">Preguntas frecuentes</h2>
+						<div class="faq">
+							{preguntas.map((q) => (
+								<details>
+									<summary>{q.p}</summary>
+									<p>{q.r}</p>
+								</details>
+							))}
+						</div>
+					</div>
+				</section>
+
+				<section class="cierre">
+					<h2>¿Listo para la ronda?</h2>
+					<a class="cta" href="/app/">Entrar a la aplicación</a>
+				</section>
+			</main>
+		</div>
+
+		<footer class="env pie">
+			<p>
+				<strong>Zaha</strong> — Sistema de soporte a la decisión clínica.
+				Prácticas Profesionalizantes 3, 2026. <a href="/">Volver al inicio</a>
+			</p>
+		</footer>
+
+		<style>
+			.env {
+				max-width: 1264px;
+				margin-inline: auto;
+				padding-inline: clamp(var(--space-4), 4vw, 88px);
+			}
+			.saltar { position: absolute; left: -9999px; }
+			.saltar:focus { position: static; display: inline-block; margin: var(--space-2); }
+
+			/* ═══ Bloque de marca: mismo lenguaje que la landing ═══════════ */
+			.bloque {
+				background: var(--color-accent-700);
+				color: var(--color-bg);
+				border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+				padding-block: var(--space-4) calc(var(--space-8) * 1.6);
+			}
+			.barra {
+				display: flex; align-items: center; justify-content: space-between;
+				flex-wrap: wrap; gap: var(--space-3);
+				padding-block-end: var(--space-8);
+			}
+			.marca {
+				display: inline-flex; align-items: center; gap: 10px;
+				font-family: var(--font-heading); font-size: 22px;
+				color: inherit; text-decoration: none;
+			}
+			.marca-sello {
+				display: grid; place-items: center;
+				width: 38px; height: 38px; border-radius: 11px;
+				background: var(--color-bg);
+			}
+			.marca-sello img { width: auto; height: 28px; }
+			.barra nav { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+			.barra nav a { color: var(--color-bg); text-decoration: none; font-weight: 600; font-size: 15px; }
+			.barra nav a[aria-current='page'] { text-decoration: underline; text-underline-offset: 6px; }
+			.barra nav a.entrar {
+				background: var(--color-bg); color: var(--color-accent-700);
+				padding: 8px 16px; border-radius: 999px;
+			}
+
+			.hero { max-width: 760px; }
+			.kicker {
+				display: inline-block; font-size: 13px; font-weight: 600;
+				letter-spacing: 0.12em; text-transform: uppercase;
+				border: 1px solid color-mix(in srgb, var(--color-bg) 45%, transparent);
+				border-radius: 999px; padding: 4px 12px;
+			}
+			.hero h1 {
+				font-family: var(--font-heading); font-weight: 400;
+				font-size: clamp(36px, 6vw, 64px); line-height: 1.05;
+				margin: var(--space-4) 0 var(--space-3); color: var(--color-bg);
+			}
+			.entrada { font-size: clamp(16px, 1.6vw, 19px); line-height: 1.55; max-width: 60ch; margin: 0; }
+			.datos-rapidos {
+				list-style: none; padding: 0; margin: var(--space-8) 0 0;
+				display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-8);
+				font-size: 15px;
+			}
+			.datos-rapidos strong {
+				font-family: var(--font-heading); font-weight: 400;
+				font-size: 32px; margin-inline-end: 6px;
+			}
+
+			.aviso-proto p {
+				margin: var(--space-6) 0 0; padding: var(--space-3) var(--space-4);
+				border-left: 4px solid var(--color-accent-700);
+				background: var(--color-surface); border-radius: var(--radius-sm);
+				font-size: 15px; color: var(--color-text);
+			}
+
+			/* ═══ Cuerpo: índice fijo + pasos ════════════════════════════════
+			   El índice solo se fija en pantallas anchas. En el teléfono va
+			   arriba como lista corta y el contenido ocupa todo el ancho. */
+			.cuerpo {
+				display: grid; gap: var(--space-8);
+				padding-block: var(--space-8);
+			}
+			@media (min-width: 1024px) {
+				.cuerpo { grid-template-columns: 220px minmax(0, 1fr); }
+				.indice { position: sticky; top: var(--space-6); align-self: start; }
+			}
+			.indice-titulo {
+				font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+				color: var(--color-neutral-700); margin: 0 0 var(--space-2);
+			}
+			.indice ol {
+				margin: 0; padding: 0; list-style: none; counter-reset: paso;
+				display: grid; gap: 2px;
+			}
+			.indice li { counter-increment: paso; }
+			.indice a {
+				display: flex; gap: 10px; padding: 6px 10px; border-radius: var(--radius-sm);
+				color: var(--color-text); text-decoration: none; font-size: 15px;
+			}
+			.indice a::before {
+				content: counter(paso, decimal-leading-zero);
+				font-variant-numeric: tabular-nums; color: var(--color-accent-700); font-weight: 700;
+			}
+			.indice .indice-extra a::before { content: '?'; }
+			.indice a:hover, .indice a:focus-visible { background: var(--color-surface); }
+			@media (max-width: 1023px) {
+				.indice ol { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+			}
+
+			.paso {
+				display: grid; gap: var(--space-6); align-items: start;
+				padding-block: var(--space-8);
+				border-top: 1px solid var(--color-divider);
+				scroll-margin-top: var(--space-4);
+			}
+			.paso:first-child { border-top: 0; padding-top: 0; }
+			@media (min-width: 860px) {
+				.paso { grid-template-columns: minmax(0, 1fr) 300px; gap: var(--space-8); }
+				.paso-sin-imagen { grid-template-columns: minmax(0, 1fr); }
+			}
+			.paso-num {
+				display: block; font-family: var(--font-heading); font-size: 56px; line-height: 1;
+				/* -600 y no --color-accent: el acento da 3,03:1 sobre el crema y en
+				   este sistema nunca va como texto, ni siquiera grande. */
+				color: var(--color-accent-600);
+			}
+			.paso h2 {
+				font-family: var(--font-heading); font-weight: 400;
+				font-size: clamp(26px, 3vw, 34px); margin: var(--space-2) 0 var(--space-4);
+				color: var(--color-text);
+			}
+			.prosa { max-width: 64ch; font-size: 16.5px; line-height: 1.65; color: var(--color-text); }
+			.prosa :global(p) { margin: 0 0 var(--space-3); }
+			.prosa :global(ul), .prosa :global(ol) { margin: 0 0 var(--space-3); padding-inline-start: 1.3em; }
+			.prosa :global(li) { margin-bottom: 6px; }
+			.prosa :global(table) {
+				width: 100%; border-collapse: collapse; margin: var(--space-2) 0 var(--space-4);
+				font-size: 15px; background: var(--color-neutral-100); border-radius: var(--radius-sm); overflow: hidden;
+			}
+			.prosa :global(th) {
+				text-align: left; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase;
+				color: var(--color-neutral-700); padding: 10px 12px; border-bottom: 2px solid var(--color-accent-700);
+			}
+			.prosa :global(td) { padding: 9px 12px; border-bottom: 1px solid var(--color-divider); vertical-align: top; }
+
+			.ojo {
+				display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: start;
+				margin-top: var(--space-4); max-width: 64ch;
+				padding: var(--space-3) var(--space-4);
+				background: var(--color-accent-100); border-radius: var(--radius-md);
+				border: 1px solid var(--color-accent-300);
+			}
+			.ojo p { margin: 0; font-size: 15.5px; line-height: 1.55; color: var(--color-text); }
+			.ojo-etiqueta {
+				font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+				color: var(--color-bg); background: var(--color-accent-700);
+				padding: 3px 9px; border-radius: 999px; margin-top: 2px;
+			}
+
+			/* ═══ El teléfono ═════════════════════════════════════════════════
+			   Las capturas son de 390 px de ancho: un marco de teléfono las
+			   presenta como lo que son, la app en la mano. */
+			.pantalla { margin: 0; justify-self: center; width: min(300px, 82vw); }
+			@media (min-width: 860px) { .pantalla { position: sticky; top: var(--space-6); } }
+			.telefono {
+				border-radius: 36px; padding: 10px;
+				background: var(--color-neutral-900);
+				box-shadow: var(--shadow-lg);
+			}
+			.telefono img {
+				display: block; width: 100%; height: auto;
+				border-radius: 27px; background: var(--color-neutral-100);
+			}
+
+			.faq { display: grid; gap: var(--space-2); max-width: 64ch; }
+			.faq details {
+				background: var(--color-neutral-100); border-radius: var(--radius-md);
+				padding: var(--space-3) var(--space-4);
+			}
+			.faq summary { cursor: pointer; font-weight: 600; font-size: 16px; }
+			.faq details p { margin: var(--space-2) 0 0; line-height: 1.6; }
+
+			.cierre {
+				margin-top: var(--space-8); padding: var(--space-8) var(--space-6);
+				background: var(--color-surface); border-radius: var(--radius-lg);
+				display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-4);
+			}
+			.cierre h2 { font-family: var(--font-heading); font-weight: 400; font-size: 28px; margin: 0; }
+			.cta {
+				display: inline-block; background: var(--color-accent-700); color: var(--color-bg);
+				padding: 12px 24px; border-radius: 999px; font-weight: 700; text-decoration: none;
+			}
+			.cta:hover { background: var(--color-accent-800); }
+
+			.pie { padding-block: var(--space-8); color: var(--color-neutral-700); font-size: 14px; }
+			.pie a { color: var(--color-accent-700); }
+		</style>
+	</body>
+</html>
