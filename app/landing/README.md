@@ -1,43 +1,38 @@
-# Astro Starter Kit: Minimal
+# app/landing — el sitio público
 
-```sh
-npm create astro@latest -- --template minimal
+Astro 6 + Tailwind 4, servido en la raíz de [zahasalud.com.ar](https://zahasalud.com.ar).
+
+## Correrlo
+
+```bash
+npm ci
+npm run dev        # http://localhost:4321
+npm run build      # -> dist/
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+En desarrollo, `/api/motor/*` se redirige al Space de Hugging Face (`astro.config.mjs`). En
+producción lo hace la regla de `vercel.json` de la raíz.
 
-## 🚀 Project Structure
+## Páginas
 
-Inside of your Astro project, you'll see the following folders and files:
+| Ruta | Archivo | Qué es |
+|---|---|---|
+| `/` | `src/pages/index.astro` | La landing: intro de la Z tallada, el producto, la tecnología y la demo del motor |
+| `/manual` | `src/pages/manual.astro` | El manual de uso para enfermería, ilustrado con capturas de la app |
 
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
-```
+`src/components/DemoMotor.astro` es el formulario "Probá la estimación", que le pega al
+motor de IA real.
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## La intro
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+La Z de la marca se enciende símbolo por símbolo, cada uno con su lema, y al final vuela al
+ícono de la barra.
 
-Any static assets, like images, can be placed in the `public/` directory.
+- **Con mouse** avanza con el scroll.
+- **En pantallas táctiles** avanza con un botón *Continuar*, un pulso por toque: el scroll
+  con inercia del teléfono se pasaba de largo.
+- `?pasos` fuerza el modo con botón y `?animar` fuerza la animación aunque el sistema pida
+  reducir el movimiento. Los dos sirven para presentar desde una máquina ajena.
 
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+Los moldes de cada símbolo salen de `scripts/vectorizar_z.py`, y el favicon y la imagen para
+redes de `scripts/generar_marca_web.py`.
