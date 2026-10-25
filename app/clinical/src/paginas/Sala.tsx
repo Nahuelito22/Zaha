@@ -20,16 +20,28 @@ type Cama = {
   paciente: string
   news2_score: number | null
   risk_level: NivelRiesgo | null
-  recorded_at: string
+  /** `null`: internado y todavía sin ninguna toma. */
+  recorded_at: string | null
 }
 
-type FilaCruda = {
+type EpisodioCrudo = {
+  id: string
+  bed: string | null
+  patients: { first_name: string; last_name: string } | null
+}
+
+type TomaCruda = {
   encounter_id: string
   news2_score: number | null
   risk_level: NivelRiesgo | null
   recorded_at: string
-  patients: { first_name: string; last_name: string } | null
-  encounters: { bed: string | null } | null
+}
+
+/** Antigüedad de la última toma; sin ninguna, es lo más atrasado que puede estar. */
+function edadDe(c: Cama, ahora: number) {
+  return c.recorded_at === null
+    ? { texto: 'sin tomas', vieja: true }
+    : antiguedad(c.recorded_at, ahora)
 }
 
 export function Sala() {
@@ -39,34 +51,52 @@ export function Sala() {
   const ahora = useAhora()
 
   const cargar = useCallback(async () => {
-    // Se lee de la VISTA de vigentes: una toma enmendada no puede aparecer
-    // como el valor actual del paciente.
-    const { data, error } = await supabase
-      .from('vital_records_vigentes')
-      .select(
-        'encounter_id, news2_score, risk_level, recorded_at, patients(first_name, last_name), encounters(bed)',
-      )
-      .order('recorded_at', { ascending: false })
+    // LA SALA PARTE DE LAS INTERNACIONES, NO DE LAS TOMAS.
+    // Antes se armaba sólo desde las tomas vigentes, y un paciente recién
+    // internado —sin ninguna toma todavía— no aparecía: justo el que más
+    // necesita que alguien le cargue vitales, y sin su fila no había desde
+    // dónde hacerlo. Ahora cada internación activa es una fila, con su última
+    // toma si la tiene y "sin score" si no.
+    //
+    // Las tomas se leen de la VISTA de vigentes: una toma enmendada no puede
+    // aparecer como el valor actual del paciente.
+    const [episodios, tomas] = await Promise.all([
+      supabase
+        .from('encounters')
+        .select('id, bed, patients(first_name, last_name)')
+        .eq('status', 'activo'),
+      supabase
+        .from('vital_records_vigentes')
+        .select('encounter_id, news2_score, risk_level, recorded_at')
+        .order('recorded_at', { ascending: false }),
+    ])
 
-    if (error) {
-      setError(error.message)
+    const fallo = episodios.error ?? tomas.error
+    if (fallo) {
+      setError(fallo.message)
       return
     }
     setError(null)
 
-    // Una fila por cama: la toma vigente más reciente de cada episodio.
+    // La toma vigente más reciente de cada episodio: vienen ordenadas, así
+    // que la primera que aparece es la que vale.
+    const ultima = new Map<string, TomaCruda>()
+    for (const t of tomas.data as TomaCruda[]) {
+      if (!ultima.has(t.encounter_id)) ultima.set(t.encounter_id, t)
+    }
+
     const porEpisodio = new Map<string, Cama>()
-    for (const cruda of data as unknown as FilaCruda[]) {
-      if (porEpisodio.has(cruda.encounter_id)) continue
-      porEpisodio.set(cruda.encounter_id, {
-        encounter_id: cruda.encounter_id,
-        bed: cruda.encounters?.bed ?? null,
-        paciente: cruda.patients
-          ? `${cruda.patients.last_name}, ${cruda.patients.first_name}`
+    for (const e of episodios.data as unknown as EpisodioCrudo[]) {
+      const t = ultima.get(e.id)
+      porEpisodio.set(e.id, {
+        encounter_id: e.id,
+        bed: e.bed,
+        paciente: e.patients
+          ? `${e.patients.last_name}, ${e.patients.first_name}`
           : '—',
-        news2_score: cruda.news2_score,
-        risk_level: cruda.risk_level,
-        recorded_at: cruda.recorded_at,
+        news2_score: t?.news2_score ?? null,
+        risk_level: t?.risk_level ?? null,
+        recorded_at: t?.recorded_at ?? null,
       })
     }
 
@@ -165,7 +195,7 @@ export function Sala() {
       {/* Tablet vertical al pie de la cama: una tarjeta por cama. */}
       <ul className="ancho:hidden flex flex-col gap-2">
         {camas.map((c) => {
-          const edad = antiguedad(c.recorded_at, ahora)
+          const edad = edadDe(c, ahora)
           return (
             <li
               key={c.encounter_id}
@@ -267,7 +297,7 @@ export function Sala() {
           </thead>
           <tbody>
             {camas.map((c) => {
-              const edad = antiguedad(c.recorded_at, ahora)
+              const edad = edadDe(c, ahora)
               return (
                 <tr key={c.encounter_id}>
                   {/* El borde de riesgo va en la celda y no en la fila: con
