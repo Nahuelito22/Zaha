@@ -31,13 +31,12 @@ se controla cada 4–12 h y cuyo estado basal se conoce. La guardia rompe los tr
    y el que entra en shock séptico. En sala, la mezcla es mucho más homogénea.
 
 El **ADR-006** ya registraba, desde la literatura, que NEWS2 cae en subgrupos específicos de
-urgencias —sepsis y COVID-19— por hipoxemia silenciosa e hiperlactatemia que la escala no
-integra.
+urgencias: en sepsis y COVID-19 el AUROC para mortalidad cae a 0,66 y 0,59.
 
-> ⚠️ **Pendiente de la tesis:** las cifras de literatura que arrastra el ADR-006 (AUROC 0,66
-> en sepsis, 0,59 en COVID-19, y las 37,6 alertas por 100 pacientes-día de referencia) están
-> anotadas sin su fuente. **Hay que recuperar las citas exactas antes de la entrega final**:
-> un número sin referencia no se puede defender, y estos tres sostienen el encuadre.
+> ✅ **Resuelto el 25/10 (`SCRUM-83`).** Las tres cifras que arrastra el ADR-006 están
+> verificadas contra el texto original y citadas en `05_referencias.md`. Dos correcciones:
+> el 0,66 y el 0,59 son AUROC **para mortalidad** (el de COVID-19 sale de sólo 40
+> pacientes), y la atribución a la hipoxemia silenciosa no se encontró en la fuente.
 
 ---
 

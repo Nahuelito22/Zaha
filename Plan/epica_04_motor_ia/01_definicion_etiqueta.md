@@ -1,6 +1,6 @@
 # 🎯 Épica 4 - Paso 0: Definición de la Etiqueta (Label Spec)
 
-> **v2 — 2026-08-25.** Revisada tras la revisión de literatura (NotebookLM, 300+ fuentes).
+> **v2 — 2026-08-25.** Revisada tras la revisión de literatura (NotebookLM; 141 fuentes en el cuaderno al 25/10, ver `Plan/epica_04_motor_ia/05_referencias.md`).
 > Cambios respecto de v1: horizonte 12 h → **24 h**, se agregan variables estáticas,
 > indicadores de ausencia, y la tasa de alertas como métrica principal.
 >
@@ -125,7 +125,8 @@ de que la comparación sea honesta.
   intervención que **evita** el desenlace — y el modelo parece falsamente ineficaz en
   evaluación retrospectiva. Limitación intrínseca de este diseño; declararla explícitamente.
 - **Ámbito:** MIMIC-IV-ED es guardia, no sala general. NEWS2 cae en urgencias para
-  sepsis (AUROC 0.66) y COVID-19 (0.59) por hipoxemia silenciosa. Ver ADR-006:
+  sepsis (AUROC 0,66 para mortalidad, 159 pacientes) y COVID-19 (0,59, sólo 40 pacientes);
+  fuente en `05_referencias.md`. Ver ADR-006:
   esos subgrupos se analizan por separado.
 - **Centro único:** MIMIC proviene de un solo hospital (Beth Israel Deaconess, Boston).
   Riesgo de sesgo local y generalización externa limitada.

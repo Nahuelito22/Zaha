@@ -4,9 +4,10 @@
 > fundó los ADR con las mediciones propias obtenidas entre el 21 y el 30 de septiembre.
 >
 > **Estado de las citas:** las afirmaciones respaldadas por mediciones propias llevan al
-> lado el archivo que las reproduce. Las que vienen de literatura están marcadas con
-> **[FUENTE PENDIENTE]** y son trabajo de `SCRUM-83`. **No se completó ninguna referencia
-> de memoria**: un número con una cita inventada es peor que un número sin cita.
+> lado el archivo que las reproduce. Las que vienen de literatura llevan su cita, verificada
+> contra el texto original el 25/10/2026 (`SCRUM-83`); las referencias completas están en
+> `05_referencias.md`. **No se completó ninguna referencia de memoria**: un número con una
+> cita inventada es peor que un número sin cita.
 
 ---
 
@@ -83,9 +84,11 @@ NEWS2 asume un paciente **ya internado**, con basal conocido y controles cada 4�
 guardia rompe los tres supuestos: no hay basal, la estadía mediana es de horas y la
 población mezcla al paciente que se va de alta en dos horas con el que entra en shock.
 
-La literatura documenta caídas en subgrupos de urgencias —AUROC 0,66 en sepsis y 0,59 en
-COVID-19— atribuidas a hipoxemia silenciosa e hiperlactatemia que la escala no integra
-**[FUENTE PENDIENTE — `SCRUM-83`]**.
+La literatura documenta caídas en subgrupos de urgencias. En una guardia de Malasia con
+1.906 adultos, el AUROC de NEWS2 para mortalidad fue 0,86 en toda la cohorte, pero 0,66 en
+sepsis (159 pacientes) y 0,59 en COVID-19 (40 pacientes, IC 95 % 0,28–0,89)
+(Mhd Yunin y Tan, *PLoS ONE* 2025). El subgrupo de COVID-19 es demasiado chico para afirmar
+mucho; el de sepsis sí muestra una caída clara.
 
 **Medición propia**, con el mismo motor que corre en producción, sobre 1.300 pacientes de
 guardia de tres centros terciarios (cohorte TRIAGE, ADR-009):
@@ -106,10 +109,13 @@ mitad de las muertes.** Ése es el hueco que este trabajo intenta llenar.
 ### 3.2 · La fatiga de alertas
 
 El costo de un sistema de alerta no es sólo lo que no detecta, sino lo que interrumpe sin
-motivo. La literatura del proyecto reporta que NEWS2 con umbral ≥ 5 genera **37,6 alertas
-por 100 pacientes-día**, afecta al **12,3 % de los pacientes diariamente**, y que el
-**83,7 % de los clínicos considera inútiles las alertas actuales**
-**[FUENTE PENDIENTE — `SCRUM-83`]**.
+motivo. En 100.362 internaciones de un hospital de agudos inglés, NEWS2 con umbral ≥ 5
+generó **37,6 alertas por 100 pacientes-día**, en el **12,3 % de los pacientes cada día**,
+y aun así detectó menos de la mitad de los desenlaces (sensibilidad 0,46) (Pankhurst et al.,
+*BMJ Open* 2022). Del lado de quien recibe las alertas, en una encuesta a residentes de un
+hospital académico sólo el **16,3 % encontró útiles las herramientas de alerta de sepsis**,
+y la fatiga de alertas fue la queja principal (62,5 %) (Hijjawi y Ssentongo, *Front Med*
+2026). Citas completas en `05_referencias.md`.
 
 **Advertencia metodológica que este trabajo aporta.** La tasa por paciente-día **depende de
 cada cuánto se mide**, no sólo de cuánto alerta la escala. Sobre MIMIC-IV-ED la medición
@@ -123,7 +129,8 @@ se cancela de los dos lados. → `src/data/alertas.py`
 
 ### 3.3 · El margen de precisión es marginal
 
-Un estudio de cohorte a gran escala reporta **[FUENTE PENDIENTE — `SCRUM-83`]**:
+Un estudio de Oxford sobre 443.807 internaciones reporta, para mortalidad a 24 h y con
+signos vitales solos (Zhang et al., 2026, *preprint* de medRxiv sin revisión por pares):
 
 | Modelo | AUROC |
 |---|---|
@@ -297,10 +304,9 @@ holgadamente.
 
 ## 8 · Deuda de este documento
 
-1. **`SCRUM-83` — completar las citas.** Las cinco cifras marcadas **[FUENTE PENDIENTE]**
-   sostienen el encuadre entero. Los ADR salieron de una revisión con NotebookLM sobre 300+
-   fuentes, así que las referencias deberían poder recuperarse de ahí. **Ninguna se completó
-   de memoria a propósito.**
+1. ~~`SCRUM-83` — completar las citas.~~ **Hecho el 25/10.** Las cifras se verificaron
+   contra el texto original (`05_referencias.md`). Una no existía —el "83,7 % de los
+   clínicos considera inútiles las alertas"— y se reemplazó por el dato real con su alcance.
 2. **Validación externa del motor NEWS2.** Candidato concreto: los estadísticos publicados
    del propio estudio TRIAGE.
 3. **El encuadre regulatorio** (SaMD, disposición ANMAT 9688/19) es `SCRUM-73` y va en su
