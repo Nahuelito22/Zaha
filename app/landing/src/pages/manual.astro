@@ -6,7 +6,8 @@ import '../styles/global.css'
 // El texto sale de app/clinical/MANUAL_ENFERMERIA.md, que se escribió leyendo el
 // código de cada pantalla: los botones, los rangos y los plazos son los reales. Si
 // la app cambia, se cambian los dos. Las capturas son de la app en producción, en
-// un ancho de teléfono (390 px), con los pacientes ficticios de la sala.
+// un ancho de teléfono (390×700 px), con los pacientes ficticios de la sala. Ninguna se
+// tomó guardando datos: los formularios se llenaron y se abrió el resumen, sin confirmar.
 //
 // Cada paso es un dato y no markup suelto: así el índice lateral y los pasos no
 // pueden quedar desfasados.
@@ -262,7 +263,7 @@ const preguntas = [
 						{p.img && (
 							<figure class="pantalla">
 								<div class="telefono">
-									<img src={p.img.src} alt={p.img.alt} width="390" height="844" loading={i < 2 ? 'eager' : 'lazy'} />
+									<img src={p.img.src} alt={p.img.alt} width="390" height="700" loading={i < 2 ? 'eager' : 'lazy'} />
 								</div>
 							</figure>
 						)}
