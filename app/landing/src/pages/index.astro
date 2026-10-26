@@ -242,13 +242,16 @@ const capacidades = [
 						<span class="marca-sello"><img src="/marca/zaha-z.png" alt="" width="467" height="500" /></span>
 						Zaha
 					</span>
-					<nav aria-label="Secciones">
+					<nav id="secciones" aria-label="Secciones">
 						<a href="#producto">Producto</a>
 						<a href="#tecnologia">Tecnología</a>
 						<a href="#datos">Datos</a>
 						<a href="/manual">Manual</a>
-						<a class="entrar" href="/app/">Entrar</a>
 					</nav>
+					<a class="entrar" href="/app/">Entrar</a>
+					<button class="menu-boton" type="button" aria-expanded="false" aria-controls="secciones" aria-label="Abrir menú">
+						<span></span><span></span><span></span>
+					</button>
 				</header>
 
 				<div class="hero">
@@ -744,13 +747,51 @@ const capacidades = [
 				0%, 100% { translate: 0 0; }
 				50%      { translate: 0 5px; }
 			}
-			.barra nav { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; }
+			.barra nav { display: flex; align-items: center; gap: var(--space-6); flex-wrap: wrap; margin-inline-start: auto; }
 			.barra nav a { color: var(--color-accent-200); font-size: 15px; }
 			.barra nav a:hover { color: var(--color-bg); }
-			.barra nav a.entrar {
+			.barra .entrar {
 				background: var(--color-bg); color: var(--color-accent-700);
 				font-family: var(--font-heading); font-size: 14px;
 				padding: 9px 17px; border-radius: var(--radius-md);
+				/* Con el gap de la barra suma el mismo aire que entre enlaces. */
+				margin-inline-start: calc(var(--space-6) - var(--space-3));
+			}
+
+			/* ═══ Menú del teléfono ═════════════════════════════════════════
+			   Con poco ancho los cuatro enlaces no entran en la fila de la
+			   marca. Quedan la marca, Entrar y el botón de menú; los enlaces
+			   bajan a un panel que abre el botón. Sin JS el botón no está
+			   (.con-menu lo pone el script) y los enlaces se acomodan solos. */
+			.menu-boton { display: none; }
+			@media (max-width: 759px) {
+				.barra.con-menu { flex-wrap: wrap; row-gap: 0; }
+				.barra.con-menu .entrar { margin-inline-start: auto; }
+				.barra.con-menu .menu-boton {
+					display: inline-grid; place-content: center; gap: 5px;
+					width: 44px; height: 44px; padding: 0;
+					background: none; border: 1px solid var(--color-accent-400);
+					border-radius: var(--radius-md); cursor: pointer;
+				}
+				.menu-boton span {
+					display: block; width: 20px; height: 2px; border-radius: 1px;
+					background: var(--color-bg);
+					transition: translate 0.2s ease, rotate 0.2s ease, opacity 0.2s ease;
+				}
+				.barra.abierta .menu-boton span:nth-child(1) { translate: 0 7px; rotate: 45deg; }
+				.barra.abierta .menu-boton span:nth-child(2) { opacity: 0; }
+				.barra.abierta .menu-boton span:nth-child(3) { translate: 0 -7px; rotate: -45deg; }
+				.barra.con-menu nav {
+					display: none; order: 3; flex-basis: 100%;
+					flex-direction: column; align-items: stretch; gap: 0;
+					margin: var(--space-4) 0 0;
+					border-top: 1px solid var(--color-accent-400);
+				}
+				.barra.abierta nav { display: flex; }
+				.barra.con-menu nav a {
+					padding-block: 14px; font-size: 17px; color: var(--color-bg);
+					border-bottom: 1px solid color-mix(in srgb, var(--color-accent-400) 50%, transparent);
+				}
 			}
 
 			.hero {
@@ -1047,6 +1088,29 @@ const capacidades = [
 				.cajas { grid-template-columns: 1fr; }
 			}
 		</style>
+
+		<script>
+			// Menú del teléfono (ver "Menú del teléfono" en el CSS). Se cierra al
+			// elegir una sección, con Escape y al tocar fuera de la barra.
+			const barra = document.querySelector<HTMLElement>('.barra')
+			const menu = barra?.querySelector<HTMLButtonElement>('.menu-boton')
+			if (barra && menu) {
+				barra.classList.add('con-menu')
+				const abrir = (si: boolean) => {
+					barra.classList.toggle('abierta', si)
+					menu.setAttribute('aria-expanded', String(si))
+					menu.setAttribute('aria-label', si ? 'Cerrar menú' : 'Abrir menú')
+				}
+				menu.addEventListener('click', () => abrir(!barra.classList.contains('abierta')))
+				barra.querySelectorAll('nav a').forEach((a) => a.addEventListener('click', () => abrir(false)))
+				document.addEventListener('keydown', (e) => {
+					if (e.key === 'Escape' && barra.classList.contains('abierta')) { abrir(false); menu.focus() }
+				})
+				document.addEventListener('click', (e) => {
+					if (!barra.contains(e.target as Node)) abrir(false)
+				})
+			}
+		</script>
 
 		<script>
 			// Publica el avance del scroll por la intro (ver el bloque Intro del
