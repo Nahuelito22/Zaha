@@ -46,6 +46,21 @@ pruebas = [
 
     ("accion azul s/ blanco",                "#1f5fb8", BG, 4.5, "texto"),
     ("accion azul s/ su tinte",              "#1f5fb8", "#e8f0fb", 4.5, "texto"),
+# Tarjeta/fila de la sala teñida por nivel (.risk-tint-*): todo lo que la
+# tarjeta lleva encima tiene que seguir leyéndose sobre el tinte.
+("tinte Bajo (50%) — texto principal",    "#14171c", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — texto atenuado",     "#5a636f", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — enlace",             "#1f5fb8", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — texto del chip",     "#1f7a44", "#f2faf6", 4.5, "texto"),
+("tinte Medio Bajo — texto principal",    "#14171c", "#fdf5d9", 4.5, "texto"),
+("tinte Medio Bajo — texto atenuado",     "#5a636f", "#fdf5d9", 4.5, "texto"),
+("tinte Medio Bajo — enlace",             "#1f5fb8", "#fdf5d9", 4.5, "texto"),
+("tinte Medio — texto principal",         "#14171c", "#fdeee0", 4.5, "texto"),
+("tinte Medio — texto atenuado",          "#5a636f", "#fdeee0", 4.5, "texto"),
+("tinte Medio — enlace",                  "#1f5fb8", "#fdeee0", 4.5, "texto"),
+("tinte Alto — texto principal",          "#14171c", "#fdeaec", 4.5, "texto"),
+("tinte Alto — texto atenuado",           "#5a636f", "#fdeaec", 4.5, "texto"),
+("tinte Alto — enlace",                   "#1f5fb8", "#fdeaec", 4.5, "texto"),
     ("foco (outline) s/ blanco",             "#1f5fb8", BG, 3.0, "no-texto"),
     ("prediccion IA s/ su fondo",            "#5b3d9e", "#f0ebfa", 4.5, "texto"),
     # NO es falla: --c-border solo separa (borde de .panel, linea entre filas de

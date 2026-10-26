@@ -193,6 +193,45 @@
 .zaha-clinical .risk-edge-med    { box-shadow: inset 6px 0 0 var(--c-risk-med-border); }
 .zaha-clinical .risk-edge-high   { box-shadow: inset 8px 0 0 var(--c-risk-high-border); }
 
+/* Tinte de la tarjeta/fila: el nivel se lee desde la otra punta de la sala,
+   no solo de cerca en el chip. ESCALONADO A PROPÓSITO: cada nivel tiene su
+   color, pero no con la misma fuerza. Si todas las tarjetas pesaran igual,
+   ninguna destacaría y la sala entera parecería alerta — la fatiga de alarmas
+   que el proyecto entero busca reducir. Bajo lleva apenas un verde (la mitad
+   de su tinte, sin borde de color); de ahí crece con la gravedad: fondo
+   pleno, después borde, y en Alto borde doble.
+   Contraste verificado sobre cada tinte (auditoria_contraste.py): texto,
+   texto atenuado y enlaces quedan todos por encima de 4.5:1. */
+.zaha-clinical .panel.risk-tint-low {
+  background: color-mix(in srgb, var(--c-risk-low-bg) 50%, var(--c-bg));
+}
+.zaha-clinical .panel.risk-tint-lowmed {
+  background: var(--c-risk-lowmed-bg);
+  border-color: var(--c-risk-lowmed-border);
+}
+.zaha-clinical .panel.risk-tint-med {
+  background: var(--c-risk-med-bg);
+  border-color: var(--c-risk-med-border);
+}
+.zaha-clinical .panel.risk-tint-high {
+  background: var(--c-risk-high-bg);
+  border: 2px solid var(--c-risk-high-border);
+}
+/* En la tabla el fondo va en las celdas (con border-collapse la fila no
+   pinta borde), y el hover no lo apaga: perder el color al pasar el mouse
+   sería perder el dato. */
+.zaha-clinical .ctable tbody tr.risk-tint-low > td,
+.zaha-clinical .ctable tbody tr.risk-tint-low:hover {
+  background: color-mix(in srgb, var(--c-risk-low-bg) 50%, var(--c-bg));
+}
+.zaha-clinical .ctable tbody tr.risk-tint-lowmed > td,
+.zaha-clinical .ctable tbody tr.risk-tint-lowmed:hover { background: var(--c-risk-lowmed-bg); }
+.zaha-clinical .ctable tbody tr.risk-tint-med > td,
+.zaha-clinical .ctable tbody tr.risk-tint-med:hover { background: var(--c-risk-med-bg); }
+.zaha-clinical .ctable tbody tr.risk-tint-high > td,
+.zaha-clinical .ctable tbody tr.risk-tint-high:hover { background: var(--c-risk-high-bg); }
+
+
 /* ── Predicción del motor de IA ──────────────────────────────────────────
    Separada visualmente del score determinístico a propósito: el usuario
    tiene que poder distinguir "esto lo calculó la escala" de "esto lo
