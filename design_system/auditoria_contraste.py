@@ -48,6 +48,10 @@ pruebas = [
     ("accion azul s/ su tinte",              "#1f5fb8", "#e8f0fb", 4.5, "texto"),
 # Tarjeta/fila de la sala teñida por nivel (.risk-tint-*): todo lo que la
 # tarjeta lleva encima tiene que seguir leyéndose sobre el tinte.
+("tinte Bajo (50%) — texto principal",    "#14171c", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — texto atenuado",     "#5a636f", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — enlace",             "#1f5fb8", "#f2faf6", 4.5, "texto"),
+("tinte Bajo (50%) — texto del chip",     "#1f7a44", "#f2faf6", 4.5, "texto"),
 ("tinte Medio Bajo — texto principal",    "#14171c", "#fdf5d9", 4.5, "texto"),
 ("tinte Medio Bajo — texto atenuado",     "#5a636f", "#fdf5d9", 4.5, "texto"),
 ("tinte Medio Bajo — enlace",             "#1f5fb8", "#fdf5d9", 4.5, "texto"),
