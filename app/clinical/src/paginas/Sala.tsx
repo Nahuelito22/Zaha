@@ -201,7 +201,7 @@ export function Sala() {
               key={c.encounter_id}
               className={`panel px-4 py-3 ${
                 c.risk_level
-                  ? `risk-edge-${CLASE_RIESGO[c.risk_level]}`
+                  ? `risk-edge-${CLASE_RIESGO[c.risk_level]} risk-tint-${CLASE_RIESGO[c.risk_level]}`
                   : 'score-incomplete'
               }`}
             >
@@ -299,7 +299,10 @@ export function Sala() {
             {camas.map((c) => {
               const edad = edadDe(c, ahora)
               return (
-                <tr key={c.encounter_id}>
+                <tr
+                  key={c.encounter_id}
+                  className={c.risk_level ? `risk-tint-${CLASE_RIESGO[c.risk_level]}` : undefined}
+                >
                   {/* El borde de riesgo va en la celda y no en la fila: con
                       `border-collapse: collapse` el navegador no pinta el
                       box-shadow de un <tr>. Igual el nivel nunca depende de
